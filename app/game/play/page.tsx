@@ -53,7 +53,7 @@ export default function GamePlay() {
     };
   }, [advanceTime]);
 
-  const progress = Math.min(1, (currentTime - startTime) / (20 * 600 * 1000));
+  const progress = Math.min(1, (currentTime - startTime) / (10 * 100 * 1000));
 
   const handleInvest = (asset: Asset) => {
     const amount = amounts[asset] || 0;
