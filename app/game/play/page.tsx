@@ -16,7 +16,7 @@ export default function GamePlay() {
     events,
     isGameOver,
     initializeGame,
-    advanceTime,
+    advanceTime,  
     addInvestment,
     removeInvestment,
   } = useGameStore()
