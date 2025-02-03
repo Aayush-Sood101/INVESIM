@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore, Asset } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 
-// Define available investment options
+// Investment options with return rates
 const investmentOptions: { name: string; asset: Asset; returnRate: number }[] = [
   { name: "Savings", asset: "savings", returnRate: 4 },
   { name: "Fixed Deposit", asset: "fixedDeposit", returnRate: 6 },
@@ -20,7 +20,6 @@ export default function GamePlay() {
   const {
     currentTime,
     startTime,
-    timeScale,
     cash,
     netWorth,
     aiNetWorth,
@@ -54,10 +53,7 @@ export default function GamePlay() {
     };
   }, [advanceTime]);
 
-  const progress = Math.min(1, (currentTime - startTime) / (10 * 60 * 1000));
-  const timeRemaining = Math.max(0, 10 * 60 - (currentTime - startTime) / 1000);
-  const minutes = Math.floor(timeRemaining / 60);
-  const seconds = Math.floor(timeRemaining % 60);
+  const progress = Math.min(1, (currentTime - startTime) / (10 * 600 * 1000));
 
   const handleInvest = () => {
     if (!selectedAsset || amount <= 0 || amount > cash) {
@@ -69,17 +65,22 @@ export default function GamePlay() {
     alert(`Invested ₹${formatCurrency(amount)} in ${selectedAsset}!`);
   };
 
+  const handleWithdraw = (asset: Asset, amount: number) => {
+    if (investments[asset] < amount) {
+      alert("Insufficient funds in this investment!");
+      return;
+    }
+    withdraw(asset, amount);
+    alert(`Withdrew ₹${formatCurrency(amount)} from ${asset}`);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="grid grid-cols-[300px,1fr] h-screen">
-        {/* Left Sidebar */}
+      <div className="grid grid-cols-[300px,1fr,300px] h-screen">
+        {/* Left Sidebar - Game Info */}
         <div className="bg-primary/10 p-6 border-r border-primary/20">
           <div className="space-y-6">
-            <div className="text-2xl font-heading">Year {Math.floor(progress * 20)} of 20</div>
-
-            <div className="w-full bg-primary/20 h-2 rounded-full">
-              <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
-            </div>
+            <div className="text-2xl font-heading">Year {Math.floor(progress * 1.3)} of 20</div>
 
             <div className="space-y-2">
               <h2 className="font-heading">POCKET CASH</h2>
@@ -128,73 +129,57 @@ export default function GamePlay() {
           </AnimatePresence>
 
           {/* Investment Section */}
-          <div className="mt-24 grid grid-cols-2 gap-6">
-            {/* Investment Form */}
-            <div className="bg-primary/10 p-6 rounded-lg shadow-lg">
-              <h2 className="text-lg font-heading mb-4">💰 Invest Your Money</h2>
-              <p className="text-sm mb-2">Available Cash: ₹{formatCurrency(cash)}</p>
+          <div className="mt-8 grid grid-cols-3 gap-6">
+            {investmentOptions.map((option) => (
+              <div key={option.asset} className="bg-primary/10 p-4 rounded-lg shadow-lg">
+                <h3 className="text-lg font-heading">{option.name}</h3>
+                <p className="text-sm text-gray-500">{option.returnRate}% annual return</p>
+                <p className="mt-2 text-sm">Invested: ₹{formatCurrency(investments[option.asset] || 0)}</p>
 
-              <select
-                onChange={(e) => setSelectedAsset(e.target.value as Asset)}
-                className="w-full p-2 mb-2 border rounded"
-              >
-                <option value="">Select Investment</option>
-                {investmentOptions.map((option) => (
-                  <option key={option.asset} value={option.asset}>
-                    {option.name} - {option.returnRate}% annual return
-                  </option>
-                ))}
-              </select>
+                <input
+                  type="number"
+                  className="w-full p-2 border rounded mt-2"
+                  placeholder="Amount"
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                />
 
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
-                placeholder="Enter amount to invest"
-                className="w-full p-2 mb-2 border rounded"
-              />
+                <button
+                  className="w-full bg-green-500 text-white px-3 py-1 rounded mt-2"
+                  onClick={() => {
+                    setSelectedAsset(option.asset);
+                    handleInvest();
+                  }}
+                >
+                  Invest
+                </button>
 
-              <button
-                onClick={handleInvest}
-                className="w-full bg-primary text-white px-4 py-2 rounded-lg"
-                disabled={!selectedAsset || amount <= 0 || amount > cash}
-              >
-                Invest
-              </button>
-            </div>
+                <button
+                  className="w-full bg-red-500 text-white px-3 py-1 rounded mt-2"
+                  onClick={() => handleWithdraw(option.asset, amount)}
+                >
+                  Withdraw
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Investment Summary */}
-            <div className="bg-primary/10 p-6 rounded-lg shadow-lg">
-              <h2 className="text-lg font-heading mb-4">📈 Your Investments</h2>
-              {Object.entries(investments).map(([asset, amount]) =>
-                amount > 0 ? (
-                  <div key={asset} className="flex justify-between text-sm border-b py-2">
-                    <span>{asset}</span>
-                    <span className="font-mono">₹{formatCurrency(amount)}</span>
-                  </div>
-                ) : null
-              )}
-            </div>
+        {/* Right Sidebar - Investment Summary */}
+        <div className="bg-secondary/10 p-6 border-l border-secondary/20">
+          <h2 className="text-2xl font-heading mb-4">📈 Your Investments</h2>
+          <div className="space-y-4">
+            {investmentOptions.map((option) =>
+              investments[option.asset] > 0 ? (
+                <div key={option.asset} className="p-4 bg-secondary/20 rounded-lg shadow">
+                  <h3 className="text-lg">{option.name}</h3>
+                  <p className="text-sm text-gray-500">Annual Return: {option.returnRate}%</p>
+                  <p className="text-sm">Invested: ₹{formatCurrency(investments[option.asset])}</p>
+                </div>
+              ) : null
+            )}
           </div>
         </div>
       </div>
-
-      {/* Game Over Modal */}
-      {isGameOver && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-background p-8 rounded-lg shadow-xl max-w-md w-full"
-          >
-            <h2 className="text-2xl font-heading mb-4">Game Over!</h2>
-            <p className="mb-4">Final Net Worth: ₹{formatCurrency(netWorth)}</p>
-            <button onClick={initializeGame} className="w-full bg-primary text-white px-4 py-2 rounded-lg">
-              Play Again
-            </button>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

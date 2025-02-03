@@ -1,20 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// Difficulty Levels
+// Types
 export type Difficulty = "easy" | "medium" | "hard";
+export type Asset = "savings" | "fixedDeposit" | "ppf" | "nifty50" | "gold" | "realestate" | "crypto";
 
-// Investment Assets
-export type Asset =
-  | "savings"
-  | "fixedDeposit"
-  | "ppf"
-  | "nifty50"
-  | "gold"
-  | "realestate"
-  | "crypto";
-
-// Game Events
 export type GameEvent = {
   id: string;
   title: string;
@@ -23,7 +13,7 @@ export type GameEvent = {
   type: "expense" | "income" | "opportunity";
 };
 
-// Game State
+// Game State Type
 export type GameState = {
   startTime: number;
   currentTime: number;
@@ -49,12 +39,13 @@ export type GameState = {
   handleEvent: (event: GameEvent) => void;
   invest: (asset: Asset, amount: number) => void;
   withdraw: (asset: Asset, amount: number) => void;
-  calculateReturns: () => void;
   endGame: () => void;
 };
 
-// Game Duration (10 minutes)
-const GAME_DURATION = 600000;
+// Constants
+const GAME_DURATION = 600000; // 10 minutes
+const DEFAULT_CASH = 100000; // Default starting cash
+const AI_GROWTH_RATE = 0.05 / 12; // AI grows 5% annually, divided monthly
 
 // Investment Returns (Annualized)
 const investmentReturns: Record<Asset, number> = {
@@ -68,103 +59,51 @@ const investmentReturns: Record<Asset, number> = {
 };
 
 // Get Initial State Based on Difficulty
-const getInitialState = (difficulty: Difficulty): Partial<GameState> => {
-  const baseState = {
-    startDate: new Date(),
-    currentDate: new Date(),
-    events: [],
-  };
-
+const getInitialState = (difficulty: Difficulty) => {
   switch (difficulty) {
     case "easy":
-      return {
-        ...baseState,
-        salary: 60000,
-        fixedExpenses: 25000,
-        passiveIncomeTarget: 40000,
-        timeLimit: 20,
-        cash: 200000,
-        isGameOver: false,
-      };
+      return { salary: 60000, fixedExpenses: 25000, cash: 200000, passiveIncomeTarget: 40000, timeLimit: 20 };
     case "medium":
-      return {
-        ...baseState,
-        salary: 45000,
-        fixedExpenses: 25000,
-        passiveIncomeTarget: 45000,
-        timeLimit: 15,
-        cash: 150000,
-        isGameOver: false,
-      };
+      return { salary: 45000, fixedExpenses: 25000, cash: 150000, passiveIncomeTarget: 45000, timeLimit: 15 };
     case "hard":
-      return {
-        ...baseState,
-        salary: 35000,
-        fixedExpenses: 25000,
-        passiveIncomeTarget: 50000,
-        timeLimit: 10,
-        cash: 100000,
-        isGameOver: false,
-      };
+      return { salary: 35000, fixedExpenses: 25000, cash: 100000, passiveIncomeTarget: 50000, timeLimit: 10 };
+    default:
+      return { salary: 35000, fixedExpenses: 25000, cash: DEFAULT_CASH, passiveIncomeTarget: 50000, timeLimit: 10 };
   }
 };
 
-// Balanced Game Events
+// Indian Themed Game Events
 const indianEvents: GameEvent[] = [
-  {
-    id: "wedding",
-    title: "Family Wedding",
-    description: "Your cousin is getting married! Contribute to the celebration.",
-    cost: 100000,
-    type: "expense",
-  },
-  {
-    id: "festival",
-    title: "Diwali Bonus",
-    description: "Received festival bonus from work!",
-    cost: 50000,
-    type: "income",
-  },
-  {
-    id: "medical",
-    title: "Medical Emergency",
-    description: "Unexpected hospital visit for a family member.",
-    cost: 50000, // Lowered the cost
-    type: "expense",
-  },
+  { id: "wedding", title: "Family Wedding", description: "Contribute to a family wedding.", cost: 100000, type: "expense" },
+  { id: "festival", title: "Diwali Bonus", description: "You received a festival bonus!", cost: 50000, type: "income" },
+  { id: "medical", title: "Medical Emergency", description: "Unexpected hospital bill.", cost: 50000, type: "expense" },
 ];
 
-// Calculate Investment Returns
+// Calculate Returns on Investments
 const calculateReturns = (investments: Record<Asset, number>) => {
-  let totalReturn = 0;
-  for (const [asset, amount] of Object.entries(investments)) {
-    totalReturn += amount * investmentReturns[asset as Asset] / 12; // Monthly returns
-  }
-  return totalReturn;
+  return Object.entries(investments).reduce((total, [asset, amount]) => {
+    return total + amount * (investmentReturns[asset as Asset] / 12); // Monthly returns
+  }, 0);
 };
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
+      // Initial State
+      startDate: Date.now(),  // Add startDate
+      currentDatets: Date.now(), // Add currentDatets (or correct if misspelled)
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
       difficulty: "easy",
       ...getInitialState("easy"),
-      netWorth: 100000,
+      cash: getInitialState("easy").cash,
+      netWorth: getInitialState("easy").cash,
       passiveIncome: 0,
-      investments: {
-        savings: 0,
-        fixedDeposit: 0,
-        ppf: 0,
-        nifty50: 0,
-        gold: 0,
-        realestate: 0,
-        crypto: 0,
-      },
+      investments: { savings: 0, fixedDeposit: 0, ppf: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
       events: [],
       isGameOver: false,
-      aiNetWorth: 0,
+      aiNetWorth: getInitialState("easy").cash,
       gameSpeed: 1,
 
       // Set Difficulty
@@ -179,21 +118,16 @@ export const useGameStore = create<GameState>()(
         set({
           startTime: Date.now(),
           currentTime: Date.now(),
+          startDate: Date.now(),  // Add startDate initialization
+          currentDatets: Date.now(), // Add currentDatets initialization
           ...initialState,
-          netWorth: initialState.cash || 0,
+          cash: initialState.cash,
+          netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: {
-            savings: 0,
-            fixedDeposit: 0,
-            ppf: 0,
-            nifty50: 0,
-            gold: 0,
-            realestate: 0,
-            crypto: 0,
-          },
+          investments: { savings: 0, fixedDeposit: 0, ppf: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
           events: [],
           isGameOver: false,
-          aiNetWorth: initialState.cash || 0,
+          aiNetWorth: initialState.cash,
           gameSpeed: 1,
         });
 
@@ -204,9 +138,8 @@ export const useGameStore = create<GameState>()(
       advanceTime: () => {
         const state = get();
         const elapsedTime = Date.now() - state.startTime;
-        const progress = elapsedTime / GAME_DURATION;
-        const newTimeScale = Math.max(0.1, 1 - progress * 0.9);
-        const aiGrowth = state.aiNetWorth * (0.05 / 12); // 5% annual return, divided by 12 for monthly
+        const newTimeScale = Math.max(0.1, 1 - (elapsedTime / GAME_DURATION) * 0.9);
+        const aiGrowth = state.aiNetWorth * AI_GROWTH_RATE;
 
         const returns = calculateReturns(state.investments);
 
@@ -215,20 +148,20 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // Less frequent events (Only after 2 minutes & random chance reduced)
-        if (elapsedTime > 120000 && Math.random() < 0.03 * newTimeScale) {
+        // Random event trigger (after 2 minutes)
+        if (elapsedTime > 120000 && Math.random() < 0.02 * newTimeScale) {
           const event = indianEvents[Math.floor(Math.random() * indianEvents.length)];
           get().handleEvent(event);
         }
 
-        set((state) => ({
+        set({
           currentTime: Date.now(),
           timeScale: newTimeScale,
           aiNetWorth: state.aiNetWorth + aiGrowth,
           cash: state.cash + state.salary - state.fixedExpenses + returns,
           netWorth: state.netWorth + returns,
           passiveIncome: returns,
-        }));
+        });
       },
 
       // Handle Events
@@ -245,6 +178,14 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           investments: { ...state.investments, [asset]: state.investments[asset] + amount },
           cash: state.cash - amount,
+        }));
+      },
+
+      // Withdraw
+      withdraw: (asset, amount) => {
+        set((state) => ({
+          investments: { ...state.investments, [asset]: Math.max(0, state.investments[asset] - amount) },
+          cash: state.cash + amount,
         }));
       },
 
