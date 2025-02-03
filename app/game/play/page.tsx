@@ -1,9 +1,20 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useGameStore } from "@/lib/store"
-import { formatCurrency } from "@/lib/utils"
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useGameStore, Asset } from "@/lib/store";
+import { formatCurrency } from "@/lib/utils";
+
+// Define available investment options
+const investmentOptions: { name: string; asset: Asset; returnRate: number }[] = [
+  { name: "Savings", asset: "savings", returnRate: 4 },
+  { name: "Fixed Deposit", asset: "fixedDeposit", returnRate: 6 },
+  { name: "PPF", asset: "ppf", returnRate: 7 },
+  { name: "Nifty 50", asset: "nifty50", returnRate: 10 },
+  { name: "Gold", asset: "gold", returnRate: 8 },
+  { name: "Real Estate", asset: "realestate", returnRate: 12 },
+  { name: "Crypto", asset: "crypto", returnRate: 20 },
+];
 
 export default function GamePlay() {
   const {
@@ -13,37 +24,50 @@ export default function GamePlay() {
     cash,
     netWorth,
     aiNetWorth,
+    investments,
     events,
     isGameOver,
     initializeGame,
-    advanceTime,  
-    addInvestment,
-    removeInvestment,
-  } = useGameStore()
+    advanceTime,
+    invest,
+    withdraw,
+  } = useGameStore();
 
-  const animationFrameRef = useRef<number>()
+  const animationFrameRef = useRef<number>();
+  const [amount, setAmount] = useState<number>(0);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
   useEffect(() => {
-    initializeGame()
+    initializeGame();
 
     function gameLoop() {
-      advanceTime()
-      animationFrameRef.current = requestAnimationFrame(gameLoop)
+      advanceTime();
+      animationFrameRef.current = requestAnimationFrame(gameLoop);
     }
 
-    animationFrameRef.current = requestAnimationFrame(gameLoop)
+    animationFrameRef.current = requestAnimationFrame(gameLoop);
 
     return () => {
       if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    }
-  }, [advanceTime]) // Added advanceTime to dependencies
+    };
+  }, [advanceTime]);
 
-  const progress = Math.min(1, (currentTime - startTime) / (10 * 60 * 1000))
-  const timeRemaining = Math.max(0, 10 * 60 - (currentTime - startTime) / 1000)
-  const minutes = Math.floor(timeRemaining / 60)
-  const seconds = Math.floor(timeRemaining % 60)
+  const progress = Math.min(1, (currentTime - startTime) / (10 * 60 * 1000));
+  const timeRemaining = Math.max(0, 10 * 60 - (currentTime - startTime) / 1000);
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = Math.floor(timeRemaining % 60);
+
+  const handleInvest = () => {
+    if (!selectedAsset || amount <= 0 || amount > cash) {
+      alert("Invalid investment amount");
+      return;
+    }
+    invest(selectedAsset, amount);
+    setAmount(0);
+    alert(`Invested ₹${formatCurrency(amount)} in ${selectedAsset}!`);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -103,9 +127,54 @@ export default function GamePlay() {
             ))}
           </AnimatePresence>
 
+          {/* Investment Section */}
           <div className="mt-24 grid grid-cols-2 gap-6">
-            {/* Investment options */}
-            {/* Add your investment components here */}
+            {/* Investment Form */}
+            <div className="bg-primary/10 p-6 rounded-lg shadow-lg">
+              <h2 className="text-lg font-heading mb-4">💰 Invest Your Money</h2>
+              <p className="text-sm mb-2">Available Cash: ₹{formatCurrency(cash)}</p>
+
+              <select
+                onChange={(e) => setSelectedAsset(e.target.value as Asset)}
+                className="w-full p-2 mb-2 border rounded"
+              >
+                <option value="">Select Investment</option>
+                {investmentOptions.map((option) => (
+                  <option key={option.asset} value={option.asset}>
+                    {option.name} - {option.returnRate}% annual return
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                placeholder="Enter amount to invest"
+                className="w-full p-2 mb-2 border rounded"
+              />
+
+              <button
+                onClick={handleInvest}
+                className="w-full bg-primary text-white px-4 py-2 rounded-lg"
+                disabled={!selectedAsset || amount <= 0 || amount > cash}
+              >
+                Invest
+              </button>
+            </div>
+
+            {/* Investment Summary */}
+            <div className="bg-primary/10 p-6 rounded-lg shadow-lg">
+              <h2 className="text-lg font-heading mb-4">📈 Your Investments</h2>
+              {Object.entries(investments).map(([asset, amount]) =>
+                amount > 0 ? (
+                  <div key={asset} className="flex justify-between text-sm border-b py-2">
+                    <span>{asset}</span>
+                    <span className="font-mono">₹{formatCurrency(amount)}</span>
+                  </div>
+                ) : null
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -120,16 +189,12 @@ export default function GamePlay() {
           >
             <h2 className="text-2xl font-heading mb-4">Game Over!</h2>
             <p className="mb-4">Final Net Worth: ₹{formatCurrency(netWorth)}</p>
-            <p className="mb-6">
-              {netWorth > aiNetWorth ? "Congratulations! You beat the market!" : "Better luck next time!"}
-            </p>
-            <button onClick={initializeGame} className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-lg">
+            <button onClick={initializeGame} className="w-full bg-primary text-white px-4 py-2 rounded-lg">
               Play Again
             </button>
           </motion.div>
         </div>
       )}
     </div>
-  )
+  );
 }
-
