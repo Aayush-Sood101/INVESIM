@@ -90,8 +90,8 @@ export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       // Initial State
-      startDate: Date.now(),  // Add startDate
-      currentDatets: Date.now(), // Add currentDatets (or correct if misspelled)
+      startDate: new Date(),  // Add startDate
+      currentDate: new Date(), // Add currentDate
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
@@ -118,8 +118,8 @@ export const useGameStore = create<GameState>()(
         set({
           startTime: Date.now(),
           currentTime: Date.now(),
-          startDate: Date.now(),  // Add startDate initialization
-          currentDatets: Date.now(), // Add currentDatets initialization
+          startDate: new Date(),  // Add startDate initialization
+          currentDate: new Date(), // Add currentDate initialization
           ...initialState,
           cash: initialState.cash,
           netWorth: initialState.cash,

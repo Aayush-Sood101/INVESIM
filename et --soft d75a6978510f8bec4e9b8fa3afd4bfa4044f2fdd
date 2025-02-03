@@ -1,0 +1,50 @@
+[33mcommit d75a6978510f8bec4e9b8fa3afd4bfa4044f2fdd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mabhi-branch[m[33m, [m[1;31morigin/abhi-branch[m[33m)[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 23:21:39 2025 +0530
+
+    Late night merge if 10 minute timer and store fix by abhijit
+
+[33mcommit 5001b7552730cf5cdf2519d93834b22b8cc10849[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 21:47:29 2025 +0530
+
+    GAME MECHANICS IMPROVED
+
+[33mcommit ac302bfb65c84f68b181917a3a2e1bd78d55abd7[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 18:12:04 2025 +0530
+
+    NEW COMMIT
+
+[33mcommit a9f74656e05f36c09a131c413821b9e6acf10f52[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 17:01:56 2025 +0530
+
+    Improved game experience
+
+[33mcommit d021e064bdacc4ffff46a7c7951fa17e31218e7e[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 16:50:36 2025 +0530
+
+    Computer rate improved
+
+[33mcommit 9799eb4e8f25cb8f9add56b730f9d061225c95ce[m
+Merge: 5a41ca4 539762f
+Author: Aayush_Sood <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 16:43:16 2025 +0530
+
+    Merge pull request #1 from Abhi8756/patch-1
+    
+    Created Readme.md
+
+[33mcommit 539762fc0110d62abe529fa3dc022bfdd590853e[m
+Author: Abhijit <140577178+Abhi8756@users.noreply.github.com>
+Date:   Mon Feb 3 16:42:00 2025 +0530
+
+    Created Readme.md
+
+[33mcommit 5a41ca4e77ddb4e712bd5b8b4c691350a178ff8e[m
+Author: aayushsoodhp@gmail.com <aayushsoodhp@gmail.com>
+Date:   Mon Feb 3 16:30:53 2025 +0530
+
+    Initial Commit
