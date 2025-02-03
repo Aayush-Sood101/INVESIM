@@ -90,8 +90,6 @@ export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       // Initial State
-      startDate: Date.now(),  // Add startDate
-      currentDatets: Date.now(), // Add currentDatets (or correct if misspelled)
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
@@ -105,6 +103,8 @@ export const useGameStore = create<GameState>()(
       isGameOver: false,
       aiNetWorth: getInitialState("easy").cash,
       gameSpeed: 1,
+      startDate: new Date(),
+      currentDate: new Date(),
 
       // Set Difficulty
       setDifficulty: (difficulty) => {
@@ -113,13 +113,17 @@ export const useGameStore = create<GameState>()(
 
       // Initialize Game
       initializeGame: () => {
-        const { difficulty } = get();
+        const state = get();
+        if (state.startTime !== 0) return; // Prevent reinitialization
+        
+        const { difficulty } = state;
         const initialState = getInitialState(difficulty);
+        const now = new Date();
         set({
-          startTime: Date.now(),
-          currentTime: Date.now(),
-          startDate: Date.now(),  // Add startDate initialization
-          currentDatets: Date.now(), // Add currentDatets initialization
+          startTime: now.getTime(),
+          currentTime: now.getTime(),
+          startDate: now,
+          currentDate: now,
           ...initialState,
           cash: initialState.cash,
           netWorth: initialState.cash,
@@ -130,13 +134,13 @@ export const useGameStore = create<GameState>()(
           aiNetWorth: initialState.cash,
           gameSpeed: 1,
         });
-
-        setInterval(get().advanceTime, 1000);
       },
 
       // Advance Time
       advanceTime: () => {
         const state = get();
+        if (state.isGameOver) return;
+
         const elapsedTime = Date.now() - state.startTime;
         const newTimeScale = Math.max(0.1, 1 - (elapsedTime / GAME_DURATION) * 0.9);
         const aiGrowth = state.aiNetWorth * AI_GROWTH_RATE;
@@ -154,12 +158,16 @@ export const useGameStore = create<GameState>()(
           get().handleEvent(event);
         }
 
+        // Fixed date handling
+        const newDate = new Date(new Date(state.startDate).getTime() + elapsedTime);
+
         set({
           currentTime: Date.now(),
+          currentDate: newDate,
           timeScale: newTimeScale,
           aiNetWorth: state.aiNetWorth + aiGrowth,
           cash: state.cash + state.salary - state.fixedExpenses + returns,
-          netWorth: state.netWorth + returns,
+          netWorth: state.cash + Object.values(state.investments).reduce((a, b) => a + b, 0) + returns,
           passiveIncome: returns,
         });
       },
@@ -168,7 +176,7 @@ export const useGameStore = create<GameState>()(
       handleEvent: (event) => {
         set((state) => ({
           cash: Math.max(0, state.cash + (event.type === "income" ? event.cost : -event.cost)),
-          netWorth: Math.max(0, state.netWorth + (event.type === "income" ? event.cost : -event.cost)),
+          netWorth: state.netWorth + (event.type === "income" ? event.cost : -event.cost),
           events: [...state.events, event],
         }));
       },
@@ -178,6 +186,7 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           investments: { ...state.investments, [asset]: state.investments[asset] + amount },
           cash: state.cash - amount,
+          netWorth: state.netWorth,  // Net worth doesn't change on investment
         }));
       },
 
@@ -186,6 +195,7 @@ export const useGameStore = create<GameState>()(
         set((state) => ({
           investments: { ...state.investments, [asset]: Math.max(0, state.investments[asset] - amount) },
           cash: state.cash + amount,
+          netWorth: state.netWorth,  // Net worth doesn't change on withdrawal
         }));
       },
 
