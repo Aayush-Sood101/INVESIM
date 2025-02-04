@@ -39,6 +39,7 @@ export type GameState = {
   handleEvent: (event: GameEvent) => void;
   invest: (asset: Asset, amount: number) => void;
   withdraw: (asset: Asset, amount: number) => void;
+  updateNetWorth: () => void;
   endGame: () => void;
 };
 
@@ -51,7 +52,6 @@ const AI_GROWTH_RATE = 0.05 / 12; // AI grows 5% annually, divided monthly
 const investmentReturns: Record<Asset, number> = {
   savings: 0.04,
   fixedDeposit: 0.06,
- 
   nifty50: 0.10,
   gold: 0.08,
   realestate: 0.12,
@@ -100,7 +100,7 @@ export const useGameStore = create<GameState>()(
       cash: getInitialState("easy").cash,
       netWorth: getInitialState("easy").cash,
       passiveIncome: 0,
-      investments: { savings: 0, fixedDeposit: 0,  nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+      investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
       events: [],
       isGameOver: false,
       aiNetWorth: getInitialState("easy").cash,
@@ -124,7 +124,7 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0,  nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
           events: [],
           isGameOver: false,
           aiNetWorth: initialState.cash,
@@ -154,12 +154,24 @@ export const useGameStore = create<GameState>()(
           get().handleEvent(event);
         }
 
+        // Update pocket cash and net worth at half-year and year-end
+        const halfYearDuration = GAME_DURATION / 20;
+        const yearDuration = GAME_DURATION / 10;
+        if (elapsedTime % halfYearDuration < 1000 || elapsedTime % yearDuration < 1000) {
+          set((state) => {
+            const newCash = state.cash + state.salary - state.fixedExpenses + returns;
+            const totalInvestments = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+            return {
+              cash: newCash,
+              netWorth: newCash + totalInvestments,
+            };
+          });
+        }
+
         set({
           currentTime: Date.now(),
           timeScale: newTimeScale,
           aiNetWorth: state.aiNetWorth + aiGrowth,
-          cash: state.cash + state.salary - state.fixedExpenses + returns,
-          netWorth: state.netWorth + returns,
           passiveIncome: returns,
         });
       },
@@ -179,6 +191,7 @@ export const useGameStore = create<GameState>()(
           investments: { ...state.investments, [asset]: state.investments[asset] + amount },
           cash: state.cash - amount,
         }));
+        get().updateNetWorth();
       },
 
       // Withdraw
@@ -187,6 +200,17 @@ export const useGameStore = create<GameState>()(
           investments: { ...state.investments, [asset]: Math.max(0, state.investments[asset] - amount) },
           cash: state.cash + amount,
         }));
+        get().updateNetWorth();
+      },
+
+      // Update Net Worth
+      updateNetWorth: () => {
+        set((state) => {
+          const totalInvestments = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+          return {
+            netWorth: state.cash + totalInvestments,
+          };
+        });
       },
 
       // End Game

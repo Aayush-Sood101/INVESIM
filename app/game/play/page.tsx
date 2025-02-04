@@ -31,6 +31,7 @@ export default function GamePlay() {
     advanceTime,
     invest,
     withdraw,
+    updateNetWorth,
   } = useGameStore();
 
   const animationFrameRef = useRef<number>();
@@ -96,6 +97,7 @@ export default function GamePlay() {
     }
     invest(asset, amount);
     setAmounts((prev) => ({ ...prev, [asset]: 0 }));
+    updateNetWorth();
     alert(`Invested ₹${formatCurrency(amount)} in ${asset}!`);
   };
 
@@ -106,6 +108,7 @@ export default function GamePlay() {
     }
     withdraw(asset, amount);
     setAmounts((prev) => ({ ...prev, [asset]: 0 }));
+    updateNetWorth();
     alert(`Withdrew ₹${formatCurrency(amount)} from ${asset}`);
   };
 
