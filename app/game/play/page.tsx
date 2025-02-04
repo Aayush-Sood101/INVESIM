@@ -174,7 +174,7 @@ export default function GamePlay() {
 
                   {option.asset === "gold" ? (
                     <div className="space-y-2">
-                      <div className="text-lg font-bebas text-black mt-2">Current Gold Rate: ₹{formatCurrency(currentGoldRate)} per gram</div>
+                      <div className="text-sm font-bebas text-black mt-2">Gold Rate: ₹{formatCurrency(currentGoldRate)} per gram</div>
                       <input
                         type="number"
                         className="w-full p-2 border-2 border-black rounded mt-2 bg-white text-black"
