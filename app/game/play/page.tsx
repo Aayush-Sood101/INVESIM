@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGameStore, Asset } from "@/lib/store";
+import { useGameStore, Asset, GameEvent } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 
 // Base return rates for investment options
@@ -32,6 +32,7 @@ export default function GamePlay() {
     invest,
     withdraw,
     updateNetWorth,
+    handleEvent,
   } = useGameStore();
 
   const animationFrameRef = useRef<number>();
@@ -40,6 +41,8 @@ export default function GamePlay() {
   const [investmentOptions, setInvestmentOptions] = useState(baseInvestmentOptions);
   const [previousRates, setPreviousRates] = useState<{ [key in Asset]?: number }>({});
   const [currentYear, setCurrentYear] = useState<number>(0);
+  const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
+  const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
 
   useEffect(() => {
     initializeGame();
@@ -122,6 +125,37 @@ export default function GamePlay() {
     handleWithdraw("gold", amount);
   };
 
+  const handleExpense = (event: GameEvent) => {
+    setCurrentEvent(event);
+    setShowExpenseModal(true);
+  };
+
+  const payExpenseWithCash = () => {
+    if (currentEvent) {
+      handleEvent(currentEvent);
+      setShowExpenseModal(false);
+    }
+  };
+
+  const payExpenseWithInvestments = () => {
+    if (currentEvent) {
+      let remainingCost = currentEvent.cost;
+      const updatedInvestments = { ...investments };
+
+      for (const asset of Object.keys(updatedInvestments) as Asset[]) {
+        if (updatedInvestments[asset] > 0) {
+          const amountToWithdraw = Math.min(updatedInvestments[asset], remainingCost);
+          withdraw(asset, amountToWithdraw);
+          remainingCost -= amountToWithdraw;
+          if (remainingCost <= 0) break;
+        }
+      }
+
+      handleEvent(currentEvent);
+      setShowExpenseModal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-purple-600 text-black font-roboto">
       <header className="p-4 bg-black bg-opacity-50 flex flex-col items-center">
@@ -174,7 +208,7 @@ export default function GamePlay() {
 
                   {option.asset === "gold" ? (
                     <div className="space-y-2">
-                      <div className="text-sm font-bebas text-black mt-2">Gold Rate: ₹{formatCurrency(currentGoldRate)} per gram</div>
+                      <div className="text-sm font-bebas text-black mt-2">₹{formatCurrency(currentGoldRate)} per gram</div>
                       <input
                         type="number"
                         className="w-full p-2 border-2 border-black rounded mt-2 bg-white text-black"
@@ -242,6 +276,38 @@ export default function GamePlay() {
           </div>
         </div>
       </div>
+
+      {/* Expense Modal */}
+      <AnimatePresence>
+        {showExpenseModal && currentEvent && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-xl font-bebas">{currentEvent.title}</h2>
+              <p className="mt-2">{currentEvent.description}</p>
+              <p className="mt-2">Cost: ₹{formatCurrency(currentEvent.cost)}</p>
+              <div className="mt-4 space-x-4">
+                <button
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                  onClick={payExpenseWithCash}
+                >
+                  Pay with Cash
+                </button>
+                <button
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                  onClick={payExpenseWithInvestments}
+                >
+                  Pay with Investments
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
