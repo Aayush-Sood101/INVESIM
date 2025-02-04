@@ -63,39 +63,9 @@ export default function Home() {
             </div>
           </motion.div>
         </div>
-
+        
         {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: Wallet,
-              title: "Portfolio Management",
-              description: "Build and manage your investment portfolio with virtual money",
-            },
-            {
-              icon: TrendingUp,
-              title: "Market Simulation",
-              description: "Experience real market conditions and learn to make informed decisions",
-            },
-            {
-              icon: Target,
-              title: "Risk Management",
-              description: "Learn to balance risk and reward in your investment strategy",
-            },
-          ].map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-card p-6 rounded-xl border-4 border-primary shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <feature.icon className="w-12 h-12 mb-4 text-primary" />
-              <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-              <p className="text-muted-foreground">{feature.description}</p>
-            </motion.div>
-          ))}
-        </div>
+        
       </div>
     </div>
   )

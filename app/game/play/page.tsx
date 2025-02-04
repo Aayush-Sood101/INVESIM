@@ -156,6 +156,16 @@ export default function GamePlay() {
     }
   };
 
+  const calculateProfitOrLoss = (asset: Asset) => {
+    if (year === 0) {
+      return 0; // Initial profit or loss is 0
+    }
+    const initialInvestment = 0; // Initial investment is 0
+    const currentInvestment = investments[asset] || 0;
+    const profitOrLoss = currentInvestment - initialInvestment;
+    return profitOrLoss;
+  };
+
   return (
     <div className="min-h-screen bg-purple-600 text-black font-roboto">
       <header className="p-4 bg-black bg-opacity-50 flex flex-col items-center">
@@ -267,12 +277,20 @@ export default function GamePlay() {
         <div className="bg-yellow-300 p-6 border-l-4 border-black">
           <h2 className="text-2xl font-bebas">Your Investments</h2>
           <div className="space-y-4">
-            {investmentOptions.map((option) => (
-              <div key={option.asset} className="bg-white p-4 rounded-lg shadow-lg border-4 border-black">
-                <h3 className="text-xl font-bebas">{option.name}</h3>
-                <p className="text-sm">Amount: ₹{formatCurrency(investments[option.asset])}</p>
-              </div>
-            ))}
+            {investmentOptions.map((option) => {
+              const profitOrLoss = calculateProfitOrLoss(option.asset);
+              const profitOrLossColor = profitOrLoss >= 0 ? "text-green-500" : "text-red-500";
+
+              return (
+                <div key={option.asset} className="bg-white p-4 rounded-lg shadow-lg border-4 border-black">
+                  <h3 className="text-xl font-bebas">{option.name}</h3>
+                  <p className="text-sm">Amount: ₹{formatCurrency(investments[option.asset])}</p>
+                  <p className={`text-sm ${profitOrLossColor}`}>
+                    {profitOrLoss >= 0 ? "Profit" : "Loss"}: ₹{formatCurrency(profitOrLoss)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
