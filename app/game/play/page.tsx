@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 const investmentOptions: { name: string; asset: Asset; returnRate: number }[] = [
   { name: "Savings", asset: "savings", returnRate: 4 },
   { name: "Fixed Deposit", asset: "fixedDeposit", returnRate: 6 },
-  { name: "PPF", asset: "ppf", returnRate: 7 },
+  
   { name: "Nifty 50", asset: "nifty50", returnRate: 10 },
   { name: "Gold", asset: "gold", returnRate: 8 },
   { name: "Real Estate", asset: "realestate", returnRate: 12 },

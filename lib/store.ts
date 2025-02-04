@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 // Types
 export type Difficulty = "easy" | "medium" | "hard";
-export type Asset = "savings" | "fixedDeposit" | "ppf" | "nifty50" | "gold" | "realestate" | "crypto";
+export type Asset = "savings" | "fixedDeposit" | "nifty50" | "gold" | "realestate" | "crypto";
 
 export type GameEvent = {
   id: string;
@@ -51,7 +51,7 @@ const AI_GROWTH_RATE = 0.05 / 12; // AI grows 5% annually, divided monthly
 const investmentReturns: Record<Asset, number> = {
   savings: 0.04,
   fixedDeposit: 0.06,
-  ppf: 0.07,
+ 
   nifty50: 0.10,
   gold: 0.08,
   realestate: 0.12,
@@ -100,7 +100,7 @@ export const useGameStore = create<GameState>()(
       cash: getInitialState("easy").cash,
       netWorth: getInitialState("easy").cash,
       passiveIncome: 0,
-      investments: { savings: 0, fixedDeposit: 0, ppf: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+      investments: { savings: 0, fixedDeposit: 0,  nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
       events: [],
       isGameOver: false,
       aiNetWorth: getInitialState("easy").cash,
@@ -124,7 +124,7 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0, ppf: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+          investments: { savings: 0, fixedDeposit: 0,  nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
           events: [],
           isGameOver: false,
           aiNetWorth: initialState.cash,
