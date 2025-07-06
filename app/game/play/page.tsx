@@ -385,40 +385,40 @@ export default function GamePlay() {
   };
 
   return (
-    <div className="bg-purple-600 text-black font-roboto min-h-screen">
-      <header className="p-6 bg-black bg-opacity-50 flex flex-col items-center relative overflow-hidden">
+    <div className="bg-gradient-to-br from-background via-background to-primary/5 dark:to-primary/10 text-foreground font-poppins min-h-screen">
+      <header className="p-6 bg-gradient-to-r from-background/90 to-background/95 backdrop-blur-xl border-b border-border/50 flex flex-col items-center relative overflow-hidden">
         {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+        <div className="absolute inset-0 opacity-5 dark:opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20"></div>
         </div>
         
-        <h1 className="text-4xl font-bebas text-white relative z-10 mb-4">Investment Simulator</h1>
+        <h1 className="text-5xl font-orbitron font-bold relative z-10 mb-4 tracking-wider bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">InveSim</h1>
         
         {/* Enhanced Year Progress Section */}
         <div className="relative z-10 w-full max-w-4xl">
           {/* Year Display with Status and Month */}
           <div className="flex justify-between items-center mb-3">
-            <div className="text-2xl font-bebas text-white flex items-center">
-              <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+            <div className="text-2xl font-orbitron font-semibold flex items-center">
+              <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 Year {year}
               </span>
-              <span className="text-gray-300 mx-2">/</span>
-              <span className="text-gray-300">10</span>
+              <span className="text-muted-foreground mx-2">/</span>
+              <span className="text-muted-foreground">10</span>
               
               {/* Current Month Display */}
-              <span className="ml-4 text-lg text-blue-300 font-mono">
+              <span className="ml-4 text-lg text-primary font-jetbrains font-medium">
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][currentMonth]}
               </span>
               
               {showEventModal && (
-                <span className="ml-3 text-yellow-400 animate-pulse flex items-center">
-                  ⏸️ <span className="ml-1 text-sm">PAUSED</span>
+                <span className="ml-3 text-yellow-500 dark:text-yellow-400 animate-pulse flex items-center font-poppins">
+                  ⏸️ <span className="ml-1 text-sm font-medium">PAUSED</span>
                 </span>
               )}
             </div>
             
             {/* Time remaining */}
-            <div className="text-sm font-mono text-gray-300">
+            <div className="text-sm font-jetbrains text-gray-300 font-medium">
               {10 - year} years remaining
             </div>
           </div>
@@ -480,28 +480,28 @@ export default function GamePlay() {
             {/* Year labels with milestones for 10 years */}
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <div className="flex flex-col items-center">
-                <span>Year 0</span>
-                <span className="text-blue-400">🚀 Start</span>
+                <span className="font-jetbrains">Year 0</span>
+                <span className="text-blue-400 font-poppins font-medium">START</span>
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 2</span>
-                {year >= 2 && <span className="text-yellow-400">📈 Early</span>}
+                <span className="font-jetbrains">Year 2</span>
+                {year >= 2 && <span className="text-yellow-400 font-poppins font-medium">EARLY</span>}
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 4</span>
-                {year >= 4 && <span className="text-orange-400">💪 Growth</span>}
+                <span className="font-jetbrains">Year 4</span>
+                {year >= 4 && <span className="text-orange-400 font-poppins font-medium">GROWTH</span>}
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 6</span>
-                {year >= 6 && <span className="text-purple-400">⚡ Advanced</span>}
+                <span className="font-jetbrains">Year 6</span>
+                {year >= 6 && <span className="text-purple-400 font-poppins font-medium">ADVANCED</span>}
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 8</span>
-                {year >= 8 && <span className="text-red-400">🏃 Sprint</span>}
+                <span className="font-jetbrains">Year 8</span>
+                {year >= 8 && <span className="text-red-400 font-poppins font-medium">SPRINT</span>}
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 10</span>
-                {year >= 10 && <span className="text-green-400">🏁 Finish</span>}
+                <span className="font-jetbrains">Year 10</span>
+                {year >= 10 && <span className="text-green-400 font-poppins font-medium">FINISH</span>}
               </div>
             </div>
           </div>
@@ -541,19 +541,19 @@ export default function GamePlay() {
       <div className="grid grid-cols-[300px,1fr,300px] min-h-[calc(100vh-120px)]">
         {/* Pause overlay */}
         {showEventModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-20 z-10 pointer-events-none">
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black px-4 py-2 rounded-lg font-bebas text-lg">
+          <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-10 pointer-events-none">
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 dark:bg-yellow-500 text-black px-4 py-2 rounded-lg font-bebas text-lg shadow-lg">
               ⏸️ GAME PAUSED - Handle the expense to continue
             </div>
           </div>
         )}
         
         {/* Left Sidebar - Game Info */}
-        <div className="bg-yellow-300 p-6 border-r-4 border-black">
+        <div className="bg-card/50 backdrop-blur-sm p-6 border-r border-border/50">
           <div className="space-y-6">
             <div>
-              <div className="text-2xl font-bebas">Year {year} of 10</div>
-              <div className="text-lg font-mono text-gray-700">
+              <div className="text-2xl font-orbitron font-bold text-foreground">Year {year} of 10</div>
+              <div className="text-lg font-jetbrains text-muted-foreground font-medium">
                 {['January', 'February', 'March', 'April', 'May', 'June', 
                   'July', 'August', 'September', 'October', 'November', 'December'][currentMonth]}
               </div>
@@ -575,8 +575,8 @@ export default function GamePlay() {
             </div>
 
             <div className="space-y-2 relative">
-              <h2 className="font-bebas">POCKET CASH</h2>
-              <div className="text-2xl font-mono">
+              <h2 className="font-orbitron font-semibold tracking-wide">POCKET CASH</h2>
+              <div className="text-2xl font-jetbrains font-bold">
                 <AnimatedCounter 
                   value={cash} 
                   duration={2000} 
@@ -594,8 +594,8 @@ export default function GamePlay() {
             </div>
 
             <div className="space-y-2">
-              <h2 className="font-bebas">NET WORTH</h2>
-              <div className="text-2xl font-mono">
+              <h2 className="font-orbitron font-semibold tracking-wide">NET WORTH</h2>
+              <div className="text-2xl font-jetbrains font-bold">
                 <AnimatedCounter 
                   value={netWorth} 
                   duration={2000} 
@@ -609,8 +609,8 @@ export default function GamePlay() {
 
             {/* Monthly Income Display with Warning */}
             <div className="space-y-2">
-              <h2 className="font-bebas">MONTHLY INCOME</h2>
-              <div className={`text-lg font-mono ${monthlyNetIncome < 1000 ? 'text-red-400' : 'text-green-400'}`}>
+              <h2 className="font-orbitron font-semibold tracking-wide">MONTHLY INCOME</h2>
+              <div className={`text-lg font-jetbrains font-bold ${monthlyNetIncome < 1000 ? 'text-red-400' : 'text-green-400'}`}>
                 <AnimatedCounter 
                   value={monthlyNetIncome} 
                   duration={800} 
@@ -619,15 +619,15 @@ export default function GamePlay() {
                 />
               </div>
               {monthlyNetIncome < 1000 && (
-                <div className="text-xs text-red-400 animate-pulse">
+                <div className="text-xs text-red-400 animate-pulse font-poppins">
                   ⚠️ Low monthly income! Invest wisely.
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <h2 className="font-bebas">AI COMPETITOR</h2>
-              <div className="text-xl font-mono">
+              <h2 className="font-orbitron font-semibold tracking-wide">AI COMPETITOR</h2>
+              <div className="text-xl font-jetbrains font-bold">
                 <AnimatedCounter 
                   value={aiNetWorth} 
                   duration={2000} 
@@ -637,7 +637,7 @@ export default function GamePlay() {
                   startFromZero={gameStarted}
                 />
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground font-poppins">
                 {netWorth > aiNetWorth ? "You're winning! 🎉" : "AI is ahead 🤖"}
               </div>
               
@@ -659,27 +659,24 @@ export default function GamePlay() {
         </div>
 
         {/* Main Content */}
-        <div className="p-6 relative bg-purple-600 min-h-full">
+        <div className="p-6 relative bg-gradient-to-br from-background/95 to-background min-h-full backdrop-blur-sm">
           {/* Investment Section */}
           <div className="mt-8 grid grid-cols-4 gap-4">
             {investmentOptions.map((option) => {
               const previousRate = previousRates[option.asset] || option.baseReturnRate;
               const rateColor = year === 0 || option.baseReturnRate > previousRate ? "text-green-500" : "text-red-500";
 
-              return (
-                <motion.div
-                  key={option.asset}
-                  className="bg-yellow-300 p-3 rounded-lg shadow-lg border-4 border-black"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <h3 className="text-base font-bebas">{option.name}</h3>
-                  <p className={`text-xs ${rateColor}`}>{option.baseReturnRate.toFixed(2)}% annual return</p>
-                  <p className="mt-2 text-xs">Total Invested: ₹{formatCurrency(getTotalValue(option.asset))}</p>
-
-                  {option.asset === "gold" ? (
-                    <div className="space-y-2">
-                      <div className="text-xs font-bebas text-black mt-2">₹{formatCurrency(currentGoldRate)} per gram</div>
+              return (                  <motion.div
+                    key={option.asset}
+                    className="bg-card/60 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-border/50 hover:border-primary/50 transition-all duration-300"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <h3 className="text-base font-poppins font-bold text-foreground">{option.name}</h3>
+                    <p className={`text-xs font-jetbrains ${rateColor}`}>{option.baseReturnRate.toFixed(2)}% annual return</p>
+                    <p className="mt-2 text-xs font-poppins text-muted-foreground">Total Invested: ₹{formatCurrency(getTotalValue(option.asset))}</p>                    {option.asset === "gold" ? (
+                      <div className="space-y-2">
+                        <div className="text-xs font-jetbrains font-semibold text-black mt-2">₹{formatCurrency(currentGoldRate)} per gram</div>
                       <input
                         type="number"
                         className="w-full p-1 border-2 border-black rounded mt-2 bg-white text-black text-sm"
@@ -735,7 +732,7 @@ export default function GamePlay() {
           
           {/* Stock Trading Section */}
           <div className="mt-12">
-            <h2 className="text-2xl font-bebas mb-4 text-center">📈 STOCK MARKET</h2>
+            <h2 className="text-3xl font-orbitron font-bold mb-4 text-center text-white tracking-wider">STOCK MARKET</h2>
             <div className="grid grid-cols-4 gap-4">
               {Object.entries(stocks).map(([symbol, stock]) => {
                 const ownedShares = getOwnedShares(symbol);
@@ -750,11 +747,11 @@ export default function GamePlay() {
                     whileTap={{ scale: 0.95 }}
                   >
                     <div className="text-center">
-                      <h3 className="text-lg font-bebas text-black">{stock.symbol}</h3>
-                      <p className="text-xs text-gray-600 mb-2">{stock.name}</p>
+                      <h3 className="text-lg font-poppins font-bold text-black">{stock.symbol}</h3>
+                      <p className="text-xs text-gray-600 mb-2 font-poppins">{stock.name}</p>
                       
                       <div className="space-y-1">
-                        <div className="text-xl font-bold text-black">
+                        <div className="text-xl font-jetbrains font-bold text-black">
                           ₹{stock.currentPrice.toFixed(2)}
                         </div>
                         <div className={`text-sm font-semibold ${stock.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -813,7 +810,7 @@ export default function GamePlay() {
           
           {/* Crypto Trading Section */}
           <div className="mt-12">
-            <h2 className="text-2xl font-bebas mb-4 text-center">🪙 CRYPTO MARKET</h2>
+            <h2 className="text-3xl font-orbitron font-bold mb-4 text-center text-white tracking-wider">CRYPTO MARKET</h2>
             <div className="grid grid-cols-4 gap-4">
               {Object.entries(cryptos).map(([symbol, crypto]) => {
                 const ownedCoins = getOwnedCoins(symbol);
@@ -828,11 +825,11 @@ export default function GamePlay() {
                     whileTap={{ scale: 0.95 }}
                   >
                     <div className="text-center">
-                      <h3 className="text-lg font-bebas text-purple-800">{crypto.symbol}</h3>
-                      <p className="text-xs text-gray-700 mb-2">{crypto.name}</p>
+                      <h3 className="text-lg font-poppins font-bold text-purple-800">{crypto.symbol}</h3>
+                      <p className="text-xs text-gray-700 mb-2 font-poppins">{crypto.name}</p>
                       
                       <div className="space-y-1">
-                        <div className="text-xl font-bold text-purple-800">
+                        <div className="text-xl font-jetbrains font-bold text-purple-800">
                           ₹{crypto.currentPrice.toFixed(2)}
                         </div>
                         <div className={`text-sm font-semibold ${crypto.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -892,7 +889,7 @@ export default function GamePlay() {
           
           {/* Real Estate Market Section */}
           <div className="mt-12">
-            <h2 className="text-2xl font-bebas mb-4 text-center">🏠 REAL ESTATE MARKET</h2>
+            <h2 className="text-3xl font-orbitron font-bold mb-4 text-center text-white tracking-wider">REAL ESTATE MARKET</h2>
             <div className="grid grid-cols-4 gap-4">
               {Object.entries(realEstates).map(([symbol, realEstate]) => {
                 const ownedProperties = getOwnedProperties(symbol);
@@ -907,11 +904,11 @@ export default function GamePlay() {
                     whileTap={{ scale: 0.95 }}
                   >
                     <div className="text-center">
-                      <h3 className="text-lg font-bebas text-green-800">{realEstate.symbol}</h3>
-                      <p className="text-xs text-gray-700 mb-2">{realEstate.name}</p>
+                      <h3 className="text-lg font-poppins font-bold text-green-800">{realEstate.symbol}</h3>
+                      <p className="text-xs text-gray-700 mb-2 font-poppins">{realEstate.name}</p>
                       
                       <div className="space-y-1">
-                        <div className="text-xl font-bold text-green-800">
+                        <div className="text-xl font-jetbrains font-bold text-green-800">
                           ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
                         </div>
                         <div className={`text-sm font-semibold ${realEstate.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -970,21 +967,21 @@ export default function GamePlay() {
         </div>
 
         {/* Right Sidebar - Investments */}
-        <div className="bg-yellow-300 p-6 border-l-4 border-black">
-          <h2 className="text-2xl font-bebas">Your Investments</h2>
+        <div className="bg-card/50 backdrop-blur-sm p-6 border-l border-border/50">
+          <h2 className="text-2xl font-orbitron font-bold tracking-wide text-foreground">Your Investments</h2>
           <div className="space-y-4">
             {investmentOptions.map((option) => {
               const principal = investments[option.asset] || 0;
               const profits = investmentProfits[option.asset] || 0;
               const totalValue = getTotalValue(option.asset);
               const profitPercentage = getProfitPercentage(option.asset);
-              const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
+              const profitColor = profits >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
               return (
-                <div key={option.asset} className="bg-white p-4 rounded-lg shadow-lg border-4 border-black">
-                  <h3 className="text-xl font-bebas">{option.name}</h3>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
+                <div key={option.asset} className="bg-card/60 backdrop-blur-sm p-4 rounded-lg shadow-lg border border-border/50 hover:border-primary/30 transition-all duration-300">
+                  <h3 className="text-xl font-poppins font-semibold text-foreground">{option.name}</h3>
+                  <div className="space-y-1 text-sm font-poppins">
+                    <p className="text-blue-600 dark:text-blue-400">Principal: ₹{formatCurrency(principal)}</p>
                     <p className={profitColor}>
                       Profits: ₹{formatCurrency(profits)} 
                       {principal > 0 && (
@@ -1004,7 +1001,7 @@ export default function GamePlay() {
           
           {/* Stock Holdings */}
           <div className="mt-6">
-            <h3 className="text-xl font-bebas mb-3">Stock Holdings</h3>
+            <h3 className="text-xl font-orbitron font-semibold mb-3 tracking-wide">Stock Holdings</h3>
             <div className="space-y-3">
               {(() => {
                 const ownedStocks = Object.entries(stocks).filter(([symbol, stock]) => {
@@ -1016,8 +1013,8 @@ export default function GamePlay() {
                   return (
                     <div className="bg-gray-100 p-4 rounded-lg shadow-lg border-4 border-gray-400 text-center">
                       <div className="text-gray-500 mb-2 text-2xl">📈</div>
-                      <h4 className="text-sm font-bebas text-gray-600 mb-1">No Stock Investments</h4>
-                      <p className="text-xs text-gray-500">Start investing in stocks to see your holdings here!</p>
+                      <h4 className="text-sm font-poppins font-semibold text-gray-600 mb-1">No Stock Investments</h4>
+                      <p className="text-xs text-gray-500 font-poppins">Start investing in stocks to see your holdings here!</p>
                     </div>
                   );
                 }
@@ -1070,7 +1067,7 @@ export default function GamePlay() {
           
           {/* Crypto Holdings */}
           <div className="mt-6">
-            <h3 className="text-xl font-bebas mb-3">Crypto Holdings</h3>
+            <h3 className="text-xl font-orbitron font-semibold mb-3 tracking-wide">Crypto Holdings</h3>
             <div className="space-y-3">
               {(() => {
                 const ownedCryptos = Object.entries(cryptos).filter(([symbol, crypto]) => {
@@ -1082,8 +1079,8 @@ export default function GamePlay() {
                   return (
                     <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg shadow-lg border-4 border-purple-400 text-center">
                       <div className="text-purple-500 mb-2 text-2xl">₿</div>
-                      <h4 className="text-sm font-bebas text-purple-600 mb-1">No Crypto Investments</h4>
-                      <p className="text-xs text-purple-500">Start investing in cryptocurrency to see your holdings here!</p>
+                      <h4 className="text-sm font-poppins font-semibold text-purple-600 mb-1">No Crypto Investments</h4>
+                      <p className="text-xs text-purple-500 font-poppins">Start investing in cryptocurrency to see your holdings here!</p>
                     </div>
                   );
                 }
@@ -1136,7 +1133,7 @@ export default function GamePlay() {
           
           {/* Real Estate Holdings */}
           <div className="mt-6">
-            <h3 className="text-xl font-bebas mb-3">Real Estate Holdings</h3>
+            <h3 className="text-xl font-orbitron font-semibold mb-3 tracking-wide">Real Estate Holdings</h3>
             <div className="space-y-3">
               {(() => {
                 const ownedRealEstates = Object.entries(realEstates).filter(([symbol, realEstate]) => {
@@ -1148,8 +1145,8 @@ export default function GamePlay() {
                   return (
                     <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg shadow-lg border-4 border-green-400 text-center">
                       <div className="text-green-500 mb-2 text-2xl">🏠</div>
-                      <h4 className="text-sm font-bebas text-green-600 mb-1">No Real Estate Investments</h4>
-                      <p className="text-xs text-green-500">Start investing in real estate to see your holdings here!</p>
+                      <h4 className="text-sm font-poppins font-semibold text-green-600 mb-1">No Real Estate Investments</h4>
+                      <p className="text-xs text-green-500 font-poppins">Start investing in real estate to see your holdings here!</p>
                     </div>
                   );
                 }
@@ -1218,10 +1215,10 @@ export default function GamePlay() {
                 <span className="text-2xl">
                   {currentEvent.type === 'income' ? '🎉' : '💸'}
                 </span>
-                <h2 className="text-xl font-bebas">{currentEvent.title}</h2>
+                <h2 className="text-xl font-poppins font-bold">{currentEvent.title}</h2>
               </div>
-              <p className="mt-2">{currentEvent.description}</p>
-              <p className={`mt-2 font-semibold ${
+              <p className="mt-2 font-poppins">{currentEvent.description}</p>
+              <p className={`mt-2 font-semibold font-jetbrains ${
                 currentEvent.type === 'income' ? 'text-green-600' : 'text-red-600'
               }`}>
                 {currentEvent.type === 'income' ? 'Amount Received:' : 'Cost:'} {currentEvent.type === 'income' ? '+' : ''}₹{formatCurrency(currentEvent.cost)}

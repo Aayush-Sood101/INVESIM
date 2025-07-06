@@ -13,8 +13,7 @@ export function Navigation() {
             Invesim
           </Link>
           <nav className="flex gap-4">
-            <Link href="/">Home</Link>
-            <Link href="/play">Play</Link>
+
             <Link href="/past-results">Past Results</Link>
           </nav>
         </div>

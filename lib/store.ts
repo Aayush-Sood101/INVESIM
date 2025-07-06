@@ -249,30 +249,30 @@ const getAISettings = (difficulty: Difficulty) => {
   switch (difficulty) {
     case "easy":
       return { 
-        baseReturnRate: 0.08, // 8% base annual return
-        expenseMultiplier: 0.9, // 90% of player expenses (less frugal)
-        investmentRatio: 0.6, // 60% of net worth invested
+        baseReturnRate: 0.10, // 10% base annual return (boosted from 8%)
+        expenseMultiplier: 0.85, // 85% of player expenses (more frugal)
+        investmentRatio: 0.65, // 65% of net worth invested (increased)
         volatility: 0.15 // 15% volatility - can have losses
       };
     case "medium":
       return { 
-        baseReturnRate: 0.12, // 12% base annual return
-        expenseMultiplier: 0.8, // 80% of player expenses (more frugal)
-        investmentRatio: 0.75, // 75% of net worth invested
+        baseReturnRate: 0.15, // 15% base annual return (boosted from 12%)
+        expenseMultiplier: 0.75, // 75% of player expenses (more frugal)
+        investmentRatio: 0.80, // 80% of net worth invested (increased)
         volatility: 0.20 // 20% volatility - more losses possible
       };
     case "hard":
       return { 
-        baseReturnRate: 0.16, // 16% base annual return
-        expenseMultiplier: 0.7, // 70% of player expenses (very frugal)
-        investmentRatio: 0.85, // 85% of net worth invested
+        baseReturnRate: 0.20, // 20% base annual return (boosted from 16%)
+        expenseMultiplier: 0.65, // 65% of player expenses (very frugal)
+        investmentRatio: 0.90, // 90% of net worth invested (increased)
         volatility: 0.25 // 25% volatility - significant losses possible
       };
     default:
       return { 
-        baseReturnRate: 0.12, 
-        expenseMultiplier: 0.8, 
-        investmentRatio: 0.75, 
+        baseReturnRate: 0.15, 
+        expenseMultiplier: 0.75, 
+        investmentRatio: 0.80, 
         volatility: 0.20 
       };
   }
@@ -594,11 +594,30 @@ export const useGameStore = create<GameState>()(
             const aiReturnMultiplier = 1 + (volatilityFactor * aiSettings.volatility);
             const aiInvestmentReturns = aiBaseMonthlyReturn * aiReturnMultiplier;
             
-            const totalAiMonthlyGrowth = aiMonthlyNetIncome + aiInvestmentReturns;
+            // AI Bonus Events System - AI gets smart financial decisions and windfalls
+            let aiMonthlyBonus = 0;
+            
+            // Monthly chance for AI to get bonus events (similar to player income events)
+            if (Math.random() < 0.08) { // 8% chance per month for bonus
+              const bonusTypes = [
+                { name: "Smart Investment Move", multiplier: 0.15 }, // 15% of net worth
+                { name: "Side Business Profit", multiplier: 0.08 }, // 8% of net worth  
+                { name: "Freelance Income", multiplier: 0.05 }, // 5% of net worth
+                { name: "Investment Windfall", multiplier: 0.12 }, // 12% of net worth
+                { name: "Property Appreciation", multiplier: 0.10 }, // 10% of net worth
+              ];
+              
+              const bonusEvent = bonusTypes[Math.floor(Math.random() * bonusTypes.length)];
+              aiMonthlyBonus = newAiNetWorth * bonusEvent.multiplier;
+              
+              console.log(`🤖💰 AI Bonus Event: ${bonusEvent.name} - ₹${aiMonthlyBonus.toLocaleString()}`);
+            }
+            
+            const totalAiMonthlyGrowth = aiMonthlyNetIncome + aiInvestmentReturns + aiMonthlyBonus;
             newAiNetWorth = Math.max(0, newAiNetWorth + totalAiMonthlyGrowth); // Prevent negative net worth
             
             const returnStatus = aiInvestmentReturns >= 0 ? "profit" : "loss";
-            console.log(`🤖 AI (${state.difficulty}): Monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, Investment ${returnStatus}: ₹${aiInvestmentReturns.toLocaleString()}, Total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
+            console.log(`🤖 AI (${state.difficulty}): Monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, Investment ${returnStatus}: ₹${aiInvestmentReturns.toLocaleString()}, Bonus: ₹${aiMonthlyBonus.toLocaleString()}, Total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
             console.log(`🤖 AI net worth: ₹${newAiNetWorth.toLocaleString()}`);
           } else {
             console.log(`⏸️ AI growth paused during expense modal`);
@@ -707,6 +726,12 @@ export const useGameStore = create<GameState>()(
             });
             
             console.log(`Salary increased to ₹${newSalary.toLocaleString()}, Expenses increased to ₹${newExpenses.toLocaleString()}`);
+            
+            // AI Yearly Performance Bonus - AI gets smart about major financial decisions
+            const aiYearlyBonus = newAiNetWorth * 0.12; // 12% of net worth as yearly bonus
+            newAiNetWorth += aiYearlyBonus;
+            console.log(`🤖🎉 AI Yearly Performance Bonus: ₹${aiYearlyBonus.toLocaleString()}`);
+            console.log(`🤖 AI net worth after yearly bonus: ₹${newAiNetWorth.toLocaleString()}`);
           }
           
           // Calculate portfolio value with updated profits
