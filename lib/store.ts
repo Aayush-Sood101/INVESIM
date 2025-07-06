@@ -397,9 +397,9 @@ export const useGameStore = create<GameState>()(
         // Random event trigger - reduced frequency for expense events (max 1-2 per year)
         // Only trigger expense events if it's been at least 18-36 seconds (6-12 months) since last one
         if (elapsedTime > 60000) { // After 1 minute
-          const monthsElapsed = Math.floor(elapsedTime / 3000); // 3 seconds = 1 month
+          const monthsElapsed = Math.floor(elapsedTime / 2500); // 2.5 seconds = 1 month
           const lastExpenseMonth = state.events.length > 0 ? 
-            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 3000) : 0;
+            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 2500) : 0;
           
           // Only allow expense events if it's been at least 6 months since last expense
           const monthsSinceLastExpense = monthsElapsed - lastExpenseMonth;
@@ -435,8 +435,9 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // Calculate how many months have passed (each 3 seconds = 1 month in game time for testing)
-        const monthsElapsed = Math.floor(elapsedTime / 3000); // 3 seconds = 1 month
+        // Calculate how many months have passed (each 2.5 seconds = 1 month in game time)
+        // 600 seconds total ÷ 20 years = 30 seconds per year ÷ 12 months = 2.5 seconds per month
+        const monthsElapsed = Math.floor(elapsedTime / 2500); // 2.5 seconds = 1 month
         
         // Update current date based on elapsed time
         const gameStartDate = new Date(state.startDate);
@@ -630,7 +631,7 @@ export const useGameStore = create<GameState>()(
             console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
           } else {
             newCash += totalCashDividends + monthlyNetIncome;
-            console.log(`Monthly salary: ₹${monthlySalary.toLocaleString()}, Monthly expenses: ₹${monthlyExpenses.toLocaleString()}`);
+            console.log(`💰 Month ${monthsElapsed}: Salary: ₹${monthlySalary.toLocaleString()}, Expenses: ₹${monthlyExpenses.toLocaleString()}, Net: ₹${monthlyNetIncome.toLocaleString()}`);
             console.log(`Monthly net income: ₹${monthlyNetIncome.toLocaleString()}`);
           }
           

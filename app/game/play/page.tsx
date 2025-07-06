@@ -372,19 +372,145 @@ export default function GamePlay() {
 
   return (
     <div className="bg-purple-600 text-black font-roboto min-h-screen">
-      <header className="p-4 bg-black bg-opacity-50 flex flex-col items-center">
-        <h1 className="text-3xl font-bebas text-white">Investment Simulator</h1>
-        <div className="text-xl font-bebas text-white mt-2">
-          Year {year} of 20 
-          {showEventModal && (
-            <span className="ml-2 text-yellow-400 animate-pulse">⏸️ PAUSED</span>
-          )}
+      <header className="p-6 bg-black bg-opacity-50 flex flex-col items-center relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
         </div>
-        <div className="mt-2 w-full bg-gray-700 rounded-full h-2.5">
-          <div
-            className="bg-green-500 h-2.5 rounded-full"
-            style={{ width: `${progress * 100}%` }}
-          ></div>
+        
+        <h1 className="text-4xl font-bebas text-white relative z-10 mb-4">Investment Simulator</h1>
+        
+        {/* Enhanced Year Progress Section */}
+        <div className="relative z-10 w-full max-w-4xl">
+          {/* Year Display with Status */}
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-2xl font-bebas text-white flex items-center">
+              <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                Year {year}
+              </span>
+              <span className="text-gray-300 mx-2">/</span>
+              <span className="text-gray-300">20</span>
+              {showEventModal && (
+                <span className="ml-3 text-yellow-400 animate-pulse flex items-center">
+                  ⏸️ <span className="ml-1 text-sm">PAUSED</span>
+                </span>
+              )}
+            </div>
+            
+            {/* Time remaining */}
+            <div className="text-sm font-mono text-gray-300">
+              {20 - year} years remaining
+            </div>
+          </div>
+          
+          {/* Enhanced Progress Bar */}
+          <div className="relative">
+            {/* Background track with gradient */}
+            <div className="w-full bg-gradient-to-r from-gray-800 to-gray-700 rounded-full h-4 shadow-inner">
+              {/* Year markers */}
+              <div className="absolute inset-0 flex justify-between items-center px-1">
+                {Array.from({ length: 21 }, (_, i) => i * 5).map((yearMark) => (
+                  <div
+                    key={yearMark}
+                    className="w-0.5 h-3 bg-gray-500 opacity-60"
+                    style={{ marginLeft: yearMark === 0 ? 0 : 'auto' }}
+                  />
+                ))}
+              </div>
+              
+              {/* Progress fill with performance-based colors */}
+              <div
+                className={`h-4 rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${
+                  netWorth > aiNetWorth 
+                    ? 'bg-gradient-to-r from-green-400 via-emerald-500 to-green-600' // Winning
+                    : netWorth > aiNetWorth * 0.8 
+                    ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-600' // Close competition
+                    : 'bg-gradient-to-r from-red-400 via-pink-500 to-red-600' // Losing
+                }`}
+                style={{ width: `${Math.min(100, progress * 100)}%` }}
+              >
+                {/* Animated shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
+                
+                {/* Performance glow */}
+                <div className={`absolute inset-0 rounded-full blur-sm opacity-50 ${
+                  netWorth > aiNetWorth 
+                    ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                    : netWorth > aiNetWorth * 0.8 
+                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                    : 'bg-gradient-to-r from-red-400 to-pink-500'
+                }`}></div>
+              </div>
+              
+              {/* Current position indicator with performance color */}
+              <div
+                className="absolute top-0 h-4 w-1 bg-white shadow-lg transition-all duration-1000"
+                style={{ left: `${Math.min(100, progress * 100)}%`, transform: 'translateX(-50%)' }}
+              >
+                {/* Pulsing dot with performance color */}
+                <div className={`absolute -top-2 -left-1 w-3 h-3 rounded-full animate-ping ${
+                  netWorth > aiNetWorth ? 'bg-green-400' : netWorth > aiNetWorth * 0.8 ? 'bg-yellow-400' : 'bg-red-400'
+                }`}></div>
+                <div className={`absolute -top-2 -left-1 w-3 h-3 rounded-full ${
+                  netWorth > aiNetWorth ? 'bg-green-300' : netWorth > aiNetWorth * 0.8 ? 'bg-yellow-300' : 'bg-red-300'
+                }`}></div>
+              </div>
+            </div>
+            
+            {/* Year labels with milestones */}
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <div className="flex flex-col items-center">
+                <span>Year 0</span>
+                <span className="text-blue-400">🚀 Start</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 5</span>
+                {year >= 5 && <span className="text-yellow-400">🎯 Quarter</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 10</span>
+                {year >= 10 && <span className="text-orange-400">⚡ Halfway</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 15</span>
+                {year >= 15 && <span className="text-purple-400">🏃 Sprint</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 20</span>
+                {year >= 20 && <span className="text-green-400">🏁 Finish</span>}
+              </div>
+            </div>
+          </div>
+          
+          {/* Progress Stats with Performance Indicators */}
+          <div className="flex justify-between items-center mt-3 text-sm">
+            <div className="text-gray-300 flex items-center">
+              <span className="font-semibold">{Math.round(progress * 100)}%</span> 
+              <span className="ml-1">Complete</span>
+              {year >= 5 && (
+                <span className={`ml-3 px-2 py-1 rounded-full text-xs font-bold transition-all duration-500 ${
+                  netWorth > aiNetWorth * 1.5
+                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black animate-bounce' // Dominating
+                    : netWorth > aiNetWorth 
+                    ? 'bg-green-500 text-white' // Winning
+                    : netWorth > aiNetWorth * 0.8 
+                    ? 'bg-yellow-500 text-black'  // Close
+                    : 'bg-red-500 text-white' // Behind
+                }`}>
+                  {netWorth > aiNetWorth * 1.5 ? '👑 DOMINATING' 
+                   : netWorth > aiNetWorth ? '🏆 WINNING' 
+                   : netWorth > aiNetWorth * 0.8 ? '⚡ CLOSE' 
+                   : '📉 BEHIND'}
+                </span>
+              )}
+            </div>
+            <div className="text-gray-300 flex items-center">
+              <div className={`w-2 h-2 rounded-full mr-2 animate-pulse ${
+                showEventModal ? 'bg-yellow-400' : 'bg-green-400'
+              }`}></div>
+              {showEventModal ? 'Event Active' : 'Game in Progress'}
+            </div>
+          </div>
         </div>
       </header>
 
