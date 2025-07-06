@@ -34,6 +34,7 @@ export type GameState = {
   currentDate: Date;
   passiveIncome: number;
   lastProcessedMonth: number;
+  monthlyNetIncome: number; // Add this to track current monthly net income
   setDifficulty: (difficulty: Difficulty) => void;
   initializeGame: () => void;
   advanceTime: () => void;
@@ -104,6 +105,7 @@ export const useGameStore = create<GameState>()(
       startDate: new Date(),  // Add startDate
       currentDate: new Date(), // Add currentDate
       lastProcessedMonth: 0, // Track last processed month to prevent duplicate updates
+      monthlyNetIncome: (getInitialState("easy").salary - getInitialState("easy").fixedExpenses) / 12,
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
@@ -133,6 +135,7 @@ export const useGameStore = create<GameState>()(
           startDate: new Date(),
           currentDate: new Date(),
           lastProcessedMonth: 0,
+          monthlyNetIncome: (initialState.salary - initialState.fixedExpenses) / 12,
           ...initialState,
           cash: initialState.cash,
           netWorth: initialState.cash,
@@ -203,9 +206,24 @@ export const useGameStore = create<GameState>()(
           const monthlyExpenses = newExpenses / 12;
           const monthlyNetIncome = monthlySalary - monthlyExpenses;
           
-          newCash += monthlyReturns + monthlyNetIncome;
-          console.log(`Monthly salary: ₹${monthlySalary.toLocaleString()}, Monthly expenses: ₹${monthlyExpenses.toLocaleString()}`);
-          console.log(`Monthly net income: ₹${monthlyNetIncome.toLocaleString()}, Total cash change: ₹${(monthlyReturns + monthlyNetIncome).toLocaleString()}`);
+          // Safety check: ensure we don't have negative monthly income (unrealistic)
+          if (monthlyNetIncome < 0) {
+            console.warn(`⚠️ Monthly net income is negative: ₹${monthlyNetIncome.toLocaleString()}. Adjusting expenses.`);
+            // Reduce expenses to ensure at least ₹1000 monthly net income
+            newExpenses = Math.max(0, newSalary - 12000); // Ensure ₹1000/month minimum
+            const adjustedMonthlyExpenses = newExpenses / 12;
+            const adjustedMonthlyNetIncome = monthlySalary - adjustedMonthlyExpenses;
+            
+            newCash += monthlyReturns + adjustedMonthlyNetIncome;
+            console.log(`Adjusted monthly expenses: ₹${adjustedMonthlyExpenses.toLocaleString()}`);
+            console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
+          } else {
+            newCash += monthlyReturns + monthlyNetIncome;
+            console.log(`Monthly salary: ₹${monthlySalary.toLocaleString()}, Monthly expenses: ₹${monthlyExpenses.toLocaleString()}`);
+            console.log(`Monthly net income: ₹${monthlyNetIncome.toLocaleString()}`);
+          }
+          
+          console.log(`Total cash change: ₹${(monthlyReturns + Math.max(monthlyNetIncome, monthlySalary - newExpenses / 12)).toLocaleString()}`);
           console.log(`New cash: ₹${newCash.toLocaleString()}`);
           
           // Check if we've completed a full year (12 months)
@@ -222,13 +240,19 @@ export const useGameStore = create<GameState>()(
             // (We've already been paying monthly throughout the year)
             const salaryIncrementRate = state.difficulty === 'easy' ? 0.08 : 
                                       state.difficulty === 'medium' ? 0.06 : 0.05;
-            const expenseIncrementRate = 0.04;
+            const expenseIncrementRate = state.difficulty === 'easy' ? 0.03 : 
+                                       state.difficulty === 'medium' ? 0.04 : 0.05; // Lower expense growth for easy mode
             
             const salaryIncrement = newSalary * salaryIncrementRate;
             const expenseIncrement = newExpenses * expenseIncrementRate;
             
             newSalary += salaryIncrement;
             newExpenses += expenseIncrement;
+            
+            console.log(`Year ${completedYear} salary increment: +₹${salaryIncrement.toLocaleString()}`);
+            console.log(`Year ${completedYear} expense increment: +₹${expenseIncrement.toLocaleString()}`);
+            console.log(`New annual salary: ₹${newSalary.toLocaleString()}, New annual expenses: ₹${newExpenses.toLocaleString()}`);
+            console.log(`New monthly net income: ₹${((newSalary - newExpenses) / 12).toLocaleString()}`);
             
             // Add salary increment event
             newEvents.push({
@@ -246,6 +270,9 @@ export const useGameStore = create<GameState>()(
           const totalInvestments = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
           const netWorth = Math.max(0, newCash) + totalInvestments;
           
+          // Store the current monthly net income for display
+          const currentMonthlyNetIncome = (newSalary - newExpenses) / 12;
+          
           // Update state with new month processed
           set({
             currentDate: currentGameDate,
@@ -254,6 +281,7 @@ export const useGameStore = create<GameState>()(
             netWorth: netWorth,
             salary: newSalary,
             fixedExpenses: newExpenses,
+            monthlyNetIncome: currentMonthlyNetIncome,
             events: newEvents,
             passiveIncome: monthlyReturns,
             currentTime: now,
@@ -322,6 +350,7 @@ export const useGameStore = create<GameState>()(
           startDate: new Date(),
           currentDate: new Date(),
           lastProcessedMonth: 0,
+          monthlyNetIncome: (initialState.salary - initialState.fixedExpenses) / 12,
           ...initialState,
           cash: initialState.cash,
           netWorth: initialState.cash,

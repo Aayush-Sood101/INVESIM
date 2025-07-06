@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGameStore, Asset, GameEvent } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { CashChangeNotification } from "@/components/ui/cash-change-notification";
 
 // Base return rates for investment options
 const baseInvestmentOptions: { name: string; asset: Asset; baseReturnRate: number }[] = [
@@ -27,6 +29,7 @@ export default function GamePlay() {
     investments,
     events,
     isGameOver,
+    monthlyNetIncome,
     initializeGame,
     advanceTime,
     invest,
@@ -43,6 +46,9 @@ export default function GamePlay() {
   const [currentYear, setCurrentYear] = useState<number>(0);
   const [showExpenseModal, setShowExpenseModal] = useState<boolean>(false);
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
+  const [showCashNotification, setShowCashNotification] = useState(false);
+  const [cashChange, setCashChange] = useState(0);
+  const [previousCash, setPreviousCash] = useState(cash);
 
   useEffect(() => {
     initializeGame();
@@ -70,6 +76,16 @@ export default function GamePlay() {
       setCurrentYear(year);
     }
   }, [year, currentYear]);
+
+  // Track cash changes for notifications
+  useEffect(() => {
+    if (cash > previousCash) {
+      const change = cash - previousCash;
+      setCashChange(change);
+      setShowCashNotification(true);
+    }
+    setPreviousCash(cash);
+  }, [cash, previousCash]);
 
   const goldReturnRate = investmentOptions.find((option) => option.asset === "gold")?.baseReturnRate || 0;
   const currentGoldRate = baseGoldPrice * Math.pow(1 + goldReturnRate / 100, year);
@@ -185,14 +201,83 @@ export default function GamePlay() {
           <div className="space-y-6">
             <div className="text-2xl font-bebas">Year {year} of 20</div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <h2 className="font-bebas">POCKET CASH</h2>
-              <div className="text-2xl font-mono">₹{formatCurrency(cash)}</div>
+              <div className="text-2xl font-mono">
+                <AnimatedCounter 
+                  value={cash} 
+                  duration={800} 
+                  prefix="₹" 
+                  className="text-green-400"
+                  isCurrency={true}
+                />
+              </div>
+              <CashChangeNotification 
+                amount={cashChange}
+                show={showCashNotification}
+                onComplete={() => setShowCashNotification(false)}
+              />
             </div>
 
             <div className="space-y-2">
               <h2 className="font-bebas">NET WORTH</h2>
-              <div className="text-2xl font-mono">₹{formatCurrency(netWorth)}</div>
+              <div className="text-2xl font-mono">
+                <AnimatedCounter 
+                  value={netWorth} 
+                  duration={800} 
+                  prefix="₹" 
+                  className="text-blue-400"
+                  isCurrency={true}
+                />
+              </div>
+            </div>
+
+            {/* Monthly Income Display with Warning */}
+            <div className="space-y-2">
+              <h2 className="font-bebas">MONTHLY INCOME</h2>
+              <div className={`text-lg font-mono ${monthlyNetIncome < 1000 ? 'text-red-400' : 'text-green-400'}`}>
+                <AnimatedCounter 
+                  value={monthlyNetIncome} 
+                  duration={800} 
+                  prefix="₹" 
+                  isCurrency={true}
+                />
+              </div>
+              {monthlyNetIncome < 1000 && (
+                <div className="text-xs text-red-400 animate-pulse">
+                  ⚠️ Low monthly income! Invest wisely.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-bebas">AI COMPETITOR</h2>
+              <div className="text-xl font-mono">
+                <AnimatedCounter 
+                  value={aiNetWorth} 
+                  duration={800} 
+                  prefix="₹" 
+                  className="text-red-400"
+                  isCurrency={true}
+                />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {netWorth > aiNetWorth ? "You're winning! 🎉" : "AI is ahead 🤖"}
+              </div>
+              
+              {/* Progress comparison bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out"
+                  style={{ 
+                    width: `${Math.min(100, Math.max(0, (netWorth / (netWorth + aiNetWorth)) * 100))}%` 
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>You</span>
+                <span>AI</span>
+              </div>
             </div>
           </div>
         </div>
