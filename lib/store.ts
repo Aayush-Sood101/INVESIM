@@ -78,7 +78,6 @@ export type GameState = {
 // Constants
 const GAME_DURATION = 600000; // 10 minutes
 const DEFAULT_CASH = 100000; // Default starting cash
-const AI_GROWTH_RATE = 0.12 / 12; // AI grows 12% annually (1% monthly) - more competitive
 
 // Investment Returns (Annualized) - stocks will have dynamic returns
 const investmentReturns: Record<Asset, number> = {
@@ -236,6 +235,40 @@ const getInitialState = (difficulty: Difficulty) => {
       return { salary: 480000, fixedExpenses: 300000, cash: 100000, passiveIncomeTarget: 600000, timeLimit: 10 }; // ₹40k/month salary, ₹25k/month expenses
     default:
       return { salary: 480000, fixedExpenses: 300000, cash: 140000, passiveIncomeTarget: 600000, timeLimit: 10 };
+  }
+};
+
+// AI Difficulty Settings - varying competitiveness and volatility
+const getAISettings = (difficulty: Difficulty) => {
+  switch (difficulty) {
+    case "easy":
+      return { 
+        baseReturnRate: 0.08, // 8% base annual return
+        expenseMultiplier: 0.9, // 90% of player expenses (less frugal)
+        investmentRatio: 0.6, // 60% of net worth invested
+        volatility: 0.15 // 15% volatility - can have losses
+      };
+    case "medium":
+      return { 
+        baseReturnRate: 0.12, // 12% base annual return
+        expenseMultiplier: 0.8, // 80% of player expenses (more frugal)
+        investmentRatio: 0.75, // 75% of net worth invested
+        volatility: 0.20 // 20% volatility - more losses possible
+      };
+    case "hard":
+      return { 
+        baseReturnRate: 0.16, // 16% base annual return
+        expenseMultiplier: 0.7, // 70% of player expenses (very frugal)
+        investmentRatio: 0.85, // 85% of net worth invested
+        volatility: 0.25 // 25% volatility - significant losses possible
+      };
+    default:
+      return { 
+        baseReturnRate: 0.12, 
+        expenseMultiplier: 0.8, 
+        investmentRatio: 0.75, 
+        volatility: 0.20 
+      };
   }
 };
 
@@ -514,18 +547,28 @@ export const useGameStore = create<GameState>()(
           // Apply monthly AI growth - AI also gets salary and investment returns like player
           // BUT: Pause AI growth when player is handling an expense modal
           if (!state.showEventModal) {
-            // AI gets similar monthly income as player but invests more aggressively
+            const aiSettings = getAISettings(state.difficulty);
+            
+            // AI gets similar monthly income as player but with different expense patterns
             const aiMonthlySalary = newSalary / 12; // AI has same salary progression
-            const aiMonthlyExpenses = newExpenses / 12 * 0.8; // AI has 20% lower expenses (more frugal)
+            const aiMonthlyExpenses = newExpenses / 12 * aiSettings.expenseMultiplier;
             const aiMonthlyNetIncome = aiMonthlySalary - aiMonthlyExpenses;
             
-            // AI also gets investment returns (assuming 80% of net worth is invested at 10% annual return)
-            const aiInvestmentReturns = (newAiNetWorth * 0.8) * (0.10 / 12); // 80% invested at 10% annual return
+            // AI investment returns with volatility - can have losses!
+            const aiInvestedAmount = newAiNetWorth * aiSettings.investmentRatio;
+            let aiBaseMonthlyReturn = (aiInvestedAmount * aiSettings.baseReturnRate) / 12;
+            
+            // Add volatility to AI returns - can be negative!
+            const volatilityFactor = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            const aiReturnMultiplier = 1 + (volatilityFactor * aiSettings.volatility);
+            const aiInvestmentReturns = aiBaseMonthlyReturn * aiReturnMultiplier;
             
             const totalAiMonthlyGrowth = aiMonthlyNetIncome + aiInvestmentReturns;
-            newAiNetWorth += totalAiMonthlyGrowth;
-            console.log(`AI monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, investment returns: ₹${aiInvestmentReturns.toLocaleString()}, total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
-            console.log(`AI net worth: ₹${newAiNetWorth.toLocaleString()}`);
+            newAiNetWorth = Math.max(0, newAiNetWorth + totalAiMonthlyGrowth); // Prevent negative net worth
+            
+            const returnStatus = aiInvestmentReturns >= 0 ? "profit" : "loss";
+            console.log(`🤖 AI (${state.difficulty}): Monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, Investment ${returnStatus}: ₹${aiInvestmentReturns.toLocaleString()}, Total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
+            console.log(`🤖 AI net worth: ₹${newAiNetWorth.toLocaleString()}`);
           } else {
             console.log(`⏸️ AI growth paused during expense modal`);
           }

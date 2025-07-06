@@ -10,7 +10,7 @@ const difficulties = [
   {
     name: "Easy",
     icon: Target,
-    description: "Start with ₹60,000/year salary and learn the basics",
+    description: "₹7.2L/year salary. AI: 8% returns, 15% volatility, 60% invested (some losses)",
     riskLevel: 20,
     startingCapital: "₹2,00,000",
     color: "bg-green-500",
@@ -18,7 +18,7 @@ const difficulties = [
   {
     name: "Medium",
     icon: Trophy,
-    description: "Start with ₹45,000/year salary and take calculated risks",
+    description: "₹6L/year salary. AI: 12% returns, 20% volatility, 75% invested (regular losses)",
     riskLevel: 50,
     startingCapital: "₹1,50,000",
     color: "bg-blue-500",
@@ -26,7 +26,7 @@ const difficulties = [
   {
     name: "Hard",
     icon: AlertTriangle,
-    description: "Start with ₹35,000/year salary and master advanced strategies",
+    description: "₹4.8L/year salary. AI: 16% returns, 25% volatility, 85% invested (frequent losses)",
     riskLevel: 80,
     startingCapital: "₹1,00,000",
     color: "bg-purple-500",
