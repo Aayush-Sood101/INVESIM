@@ -10,25 +10,25 @@ const difficulties = [
   {
     name: "Easy",
     icon: Target,
-    description: "Start with ₹75,000/month and learn the basics",
+    description: "Start with ₹60,000/year salary and learn the basics",
     riskLevel: 20,
-    startingCapital: "₹75,000",
+    startingCapital: "₹2,00,000",
     color: "bg-green-500",
   },
   {
     name: "Medium",
     icon: Trophy,
-    description: "Start with ₹50,000/month and take calculated risks",
+    description: "Start with ₹45,000/year salary and take calculated risks",
     riskLevel: 50,
-    startingCapital: "₹50,000",
+    startingCapital: "₹1,50,000",
     color: "bg-blue-500",
   },
   {
     name: "Hard",
     icon: AlertTriangle,
-    description: "Start with ₹35,000/month and master advanced strategies",
+    description: "Start with ₹35,000/year salary and master advanced strategies",
     riskLevel: 80,
-    startingCapital: "₹35,000",
+    startingCapital: "₹1,00,000",
     color: "bg-purple-500",
   },
 ]
@@ -82,7 +82,7 @@ export default function GamePage() {
                       />
                     </div>
                   </div>
-                  <div className="text-sm font-bold">Starting Salary: {difficulty.startingCapital}</div>
+                  <div className="text-sm font-bold">Starting Cash: {difficulty.startingCapital}</div>
                 </div>
               </motion.div>
             )

@@ -59,7 +59,7 @@ export default function GamePlay() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [advanceTime]);
+  }, []); // Remove advanceTime dependency
 
   const progress = Math.min(1, (currentTime - startTime) / (10 * 100 * 1000));
   const year = Math.floor(progress * 20);
