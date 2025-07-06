@@ -14,7 +14,7 @@ export function Navigation() {
           </Link>
           <nav className="flex gap-4">
 
-            <Link href="/past-results">Past Results</Link>
+            <Link href="/results">Past Results</Link>
           </nav>
         </div>
         

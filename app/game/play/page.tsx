@@ -7,6 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { CashChangeNotification } from "@/components/ui/cash-change-notification";
 import { toast } from 'react-toastify';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 // Base return rates for investment options - Traditional investments only (4 cards)
 const baseInvestmentOptions: { name: string; asset: Asset; baseReturnRate: number }[] = [
@@ -56,7 +58,11 @@ export default function GamePlay() {
     payExpenseWithInvestments,
     gameTime,
     setPaused,
+    difficulty,
   } = useGameStore();
+
+  const { user } = useUser();
+  const router = useRouter();
 
   const animationFrameRef = useRef<number>();
   const [amounts, setAmounts] = useState<{ [key in Asset]?: number }>({});
@@ -74,6 +80,45 @@ export default function GamePlay() {
   const [previousCash, setPreviousCash] = useState(cash);
   const [gameStarted, setGameStarted] = useState(false);
   const [showInvestmentSelector, setShowInvestmentSelector] = useState(false);
+  const [showGameOverModal, setShowGameOverModal] = useState(false);
+
+  // Function to save game results for signed-in users
+  const saveGameResults = async () => {
+    if (!user) return; // Don't save if user is not signed in
+
+    const playerWon = netWorth > aiNetWorth;
+    const gameResult = {
+      userId: user.id,
+      date: new Date().toISOString(),
+      playerScore: netWorth,
+      aiScore: aiNetWorth,
+      result: playerWon ? 'win' : 'loss',
+      difficulty: difficulty,
+    };
+
+    try {
+      // Save to localStorage with user ID as key for now
+      // In a real app, this would be saved to a database
+      const userResultsKey = `gameResults_${user.id}`;
+      const existingResults = localStorage.getItem(userResultsKey);
+      const results = existingResults ? JSON.parse(existingResults) : [];
+      results.push(gameResult);
+      localStorage.setItem(userResultsKey, JSON.stringify(results));
+      
+      toast.success(`🎯 Game results saved! You ${playerWon ? 'won' : 'lost'} with ₹${formatCurrency(netWorth)} vs AI's ₹${formatCurrency(aiNetWorth)}`);
+    } catch (error) {
+      console.error('Failed to save game results:', error);
+      toast.error('❌ Failed to save game results');
+    }
+  };
+
+  // Handle game over state
+  useEffect(() => {
+    if (isGameOver && !showGameOverModal) {
+      saveGameResults();
+      setShowGameOverModal(true);
+    }
+  }, [isGameOver, showGameOverModal]);
 
   useEffect(() => {
     initializeGame();
@@ -1653,6 +1698,74 @@ export default function GamePlay() {
                 </>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Game Over Modal */}
+      <AnimatePresence>
+        {showGameOverModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-card/95 backdrop-blur-sm border border-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="text-6xl mb-4">
+                {netWorth > aiNetWorth ? '🏆' : '💔'}
+              </div>
+              
+              <h2 className="text-3xl font-bold mb-4 font-orbitron">
+                {netWorth > aiNetWorth ? 'Victory!' : 'Game Over'}
+              </h2>
+              
+              <div className="space-y-4 mb-6">
+                <div className="bg-background/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2">Your Final Score</p>
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(netWorth)}</p>
+                </div>
+                
+                <div className="bg-background/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2">AI Final Score</p>
+                  <p className="text-2xl font-bold text-destructive">{formatCurrency(aiNetWorth)}</p>
+                </div>
+                
+                <div className="bg-background/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2">Margin</p>
+                  <p className={`text-xl font-bold ${netWorth > aiNetWorth ? 'text-green-600' : 'text-red-600'}`}>
+                    {netWorth > aiNetWorth ? '+' : ''}{formatCurrency(netWorth - aiNetWorth)}
+                  </p>
+                </div>
+              </div>
+
+              {user && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  ✅ Your result has been saved to your game history!
+                </p>
+              )}
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => router.push('/results')}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  View Game History
+                </button>
+                
+                <button
+                  onClick={() => router.push('/game')}
+                  className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  Play Again
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
