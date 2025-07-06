@@ -9,6 +9,7 @@ interface AnimatedCounterProps {
   suffix?: string;
   className?: string;
   isCurrency?: boolean;
+  startFromZero?: boolean; // New prop to start animation from 0
 }
 
 export function AnimatedCounter({ 
@@ -17,20 +18,33 @@ export function AnimatedCounter({
   prefix = '', 
   suffix = '', 
   className = '',
-  isCurrency = false 
+  isCurrency = false,
+  startFromZero = false
 }: AnimatedCounterProps) {
-  const animatedValue = useAnimatedCounter(value, duration);
+  const [hasStarted, setHasStarted] = useState(!startFromZero);
+  const targetValue = hasStarted ? value : 0;
+  const animatedValue = useAnimatedCounter(targetValue, duration);
   const [isIncreasing, setIsIncreasing] = useState(false);
-  const [previousValue, setPreviousValue] = useState(value);
+  const [previousValue, setPreviousValue] = useState(startFromZero ? 0 : value);
+  
+  // Start animation from 0 on mount if startFromZero is true
+  useEffect(() => {
+    if (startFromZero && !hasStarted) {
+      const timer = setTimeout(() => setHasStarted(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [startFromZero, hasStarted]);
   
   useEffect(() => {
-    if (value > previousValue) {
+    if (hasStarted && value > previousValue) {
       setIsIncreasing(true);
       const timer = setTimeout(() => setIsIncreasing(false), duration);
       return () => clearTimeout(timer);
     }
-    setPreviousValue(value);
-  }, [value, previousValue, duration]);
+    if (hasStarted) {
+      setPreviousValue(value);
+    }
+  }, [value, previousValue, duration, hasStarted]);
   
   const displayValue = isCurrency 
     ? formatCurrency(animatedValue)

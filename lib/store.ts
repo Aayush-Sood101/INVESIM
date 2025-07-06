@@ -3,7 +3,17 @@ import { persist } from "zustand/middleware";
 
 // Types
 export type Difficulty = "easy" | "medium" | "hard";
-export type Asset = "savings" | "fixedDeposit" | "nifty50" | "gold" | "realestate" | "crypto";
+export type Asset = "savings" | "fixedDeposit" | "nifty50" | "gold" | "realestate" | "crypto" | "reliance" | "tcs" | "hdfc" | "infosys" | "bitcoin" | "ethereum" | "cardano" | "polygon";
+
+export type Stock = {
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  basePrice: number;
+  change24h: number;
+  volume: number;
+  volatility: number; // How much the price can swing (0.1 = 10% max swing)
+};
 
 export type GameEvent = {
   id: string;
@@ -20,8 +30,13 @@ export type GameState = {
   timeScale: number;
   cash: number;
   netWorth: number;
-  investments: Record<Asset, number>;
+  investments: Record<Asset, number>; // Principal amounts only
+  investmentProfits: Record<Asset, number>; // Accumulated profits/returns
+  stocks: Record<string, Stock>; // Stock market data
+  cryptos: Record<string, Stock>; // Crypto market data
   events: GameEvent[];
+  currentEvent: GameEvent | null; // Current event being displayed
+  showEventModal: boolean; // Whether to show event modal
   isGameOver: boolean;
   aiNetWorth: number;
   gameSpeed: number;
@@ -39,47 +54,154 @@ export type GameState = {
   initializeGame: () => void;
   advanceTime: () => void;
   handleEvent: (event: GameEvent) => void;
+  setCurrentEvent: (event: GameEvent | null) => void;
+  setShowEventModal: (show: boolean) => void;
+  payExpenseWithCash: (event: GameEvent) => void;
+  payExpenseWithInvestments: (event: GameEvent) => void;
   invest: (asset: Asset, amount: number) => void;
   withdraw: (asset: Asset, amount: number) => void;
   updateNetWorth: () => void;
   endGame: () => void;
   resetGame: () => void;
+  buyStock: (stockSymbol: string, quantity: number) => void;
+  sellStock: (stockSymbol: string, quantity: number) => void;
+  buyCrypto: (cryptoSymbol: string, quantity: number) => void;
+  sellCrypto: (cryptoSymbol: string, quantity: number) => void;
 };
 
 // Constants
 const GAME_DURATION = 600000; // 10 minutes
 const DEFAULT_CASH = 100000; // Default starting cash
-const AI_GROWTH_RATE = 0.05 / 12; // AI grows 5% annually, divided monthly
+const AI_GROWTH_RATE = 0.12 / 12; // AI grows 12% annually (1% monthly) - more competitive
 
-// Investment Returns (Annualized)
+// Investment Returns (Annualized) - stocks will have dynamic returns
 const investmentReturns: Record<Asset, number> = {
   savings: 0.04,
   fixedDeposit: 0.06,
   nifty50: 0.10,
   gold: 0.08,
   realestate: 0.12,
-  crypto: 0.20,
+  crypto: 0.20, // Keep this for legacy purposes
+  // Individual stocks - these will be calculated dynamically based on price movements
+  reliance: 0.15,
+  tcs: 0.18,
+  hdfc: 0.14,
+  infosys: 0.16,
+  // Individual cryptos - these will be calculated dynamically based on price movements
+  bitcoin: 0.25,
+  ethereum: 0.30,
+  cardano: 0.35,
+  polygon: 0.40,
+};
+
+// Initial stock data
+const initialStocks: Record<string, Stock> = {
+  reliance: {
+    symbol: "RELIANCE",
+    name: "Reliance Industries Ltd",
+    basePrice: 2500,
+    currentPrice: 2500,
+    change24h: 0,
+    volume: 1000000,
+    volatility: 0.12 // 12% volatility
+  },
+  tcs: {
+    symbol: "TCS",
+    name: "Tata Consultancy Services",
+    basePrice: 3600,
+    currentPrice: 3600,
+    change24h: 0,
+    volume: 800000,
+    volatility: 0.10 // 10% volatility
+  },
+  hdfc: {
+    symbol: "HDFCBANK",
+    name: "HDFC Bank Ltd",
+    basePrice: 1600,
+    currentPrice: 1600,
+    change24h: 0,
+    volume: 1200000,
+    volatility: 0.08 // 8% volatility
+  },
+  infosys: {
+    symbol: "INFY",
+    name: "Infosys Ltd",
+    basePrice: 1500,
+    currentPrice: 1500,
+    change24h: 0,
+    volume: 900000,
+    volatility: 0.11 // 11% volatility
+  }
+};
+
+// Initial crypto data - highly volatile
+const initialCryptos: Record<string, Stock> = {
+  bitcoin: {
+    symbol: "BTC",
+    name: "Bitcoin",
+    basePrice: 50000,
+    currentPrice: 50000,
+    change24h: 0,
+    volume: 5000000,
+    volatility: 0.25 // 25% volatility - very high!
+  },
+  ethereum: {
+    symbol: "ETH",
+    name: "Ethereum",
+    basePrice: 3500,
+    currentPrice: 3500,
+    change24h: 0,
+    volume: 3000000,
+    volatility: 0.30 // 30% volatility - extremely high!
+  },
+  cardano: {
+    symbol: "ADA",
+    name: "Cardano",
+    basePrice: 50,
+    currentPrice: 50,
+    change24h: 0,
+    volume: 2000000,
+    volatility: 0.35 // 35% volatility - extreme!
+  },
+  polygon: {
+    symbol: "MATIC",
+    name: "Polygon",
+    basePrice: 80,
+    currentPrice: 80,
+    change24h: 0,
+    volume: 1500000,
+    volatility: 0.40 // 40% volatility - insane!
+  }
 };
 
 // Get Initial State Based on Difficulty
 const getInitialState = (difficulty: Difficulty) => {
   switch (difficulty) {
     case "easy":
-      return { salary: 60000, fixedExpenses: 25000, cash: 200000, passiveIncomeTarget: 40000, timeLimit: 20 };
+      return { salary: 720000, fixedExpenses: 300000, cash: 200000, passiveIncomeTarget: 480000, timeLimit: 20 }; // ₹60k/month salary, ₹25k/month expenses
     case "medium":
-      return { salary: 45000, fixedExpenses: 25000, cash: 150000, passiveIncomeTarget: 45000, timeLimit: 15 };
+      return { salary: 600000, fixedExpenses: 300000, cash: 150000, passiveIncomeTarget: 540000, timeLimit: 15 }; // ₹50k/month salary, ₹25k/month expenses  
     case "hard":
-      return { salary: 35000, fixedExpenses: 25000, cash: 100000, passiveIncomeTarget: 50000, timeLimit: 10 };
+      return { salary: 480000, fixedExpenses: 300000, cash: 100000, passiveIncomeTarget: 600000, timeLimit: 10 }; // ₹40k/month salary, ₹25k/month expenses
     default:
-      return { salary: 35000, fixedExpenses: 25000, cash: 140000, passiveIncomeTarget: 50000, timeLimit: 10 };
+      return { salary: 480000, fixedExpenses: 300000, cash: 140000, passiveIncomeTarget: 600000, timeLimit: 10 };
   }
 };
 
 // Indian Themed Game Events
 const indianEvents: GameEvent[] = [
-  { id: "wedding", title: "Family Wedding", description: "Contribute to a family wedding.", cost: 100000, type: "expense" },
-  { id: "festival", title: "Diwali Bonus", description: "You received a festival bonus!", cost: 50000, type: "income" },
-  { id: "medical", title: "Medical Emergency", description: "Unexpected hospital bill.", cost: 50000, type: "expense" },
+  { id: "wedding", title: "Family Wedding", description: "Contribute to a family wedding celebration.", cost: 100000, type: "expense" },
+  { id: "festival", title: "Diwali Bonus", description: "You received a festival bonus from your company!", cost: 50000, type: "income" },
+  { id: "medical", title: "Medical Emergency", description: "Unexpected hospital bill for family member.", cost: 75000, type: "expense" },
+  { id: "electricity", title: "High Electricity Bill", description: "Summer AC usage resulted in high electricity bill.", cost: 15000, type: "expense" },
+  { id: "vehicle", title: "Vehicle Repair", description: "Your vehicle needs major repairs.", cost: 30000, type: "expense" },
+  { id: "education", title: "Education Fees", description: "Annual school/college fees for family member.", cost: 45000, type: "expense" },
+  { id: "house-rent", title: "House Rent Increase", description: "Landlord increased monthly rent.", cost: 20000, type: "expense" },
+  { id: "baby", title: "New Baby Expenses", description: "Baby arrival brings new expenses.", cost: 60000, type: "expense" },
+  { id: "travel", title: "Family Emergency Travel", description: "Urgent travel for family emergency.", cost: 25000, type: "expense" },
+  { id: "bonus", title: "Performance Bonus", description: "You received a performance bonus!", cost: 75000, type: "income" },
+  { id: "investment", title: "Investment Returns", description: "Unexpected returns from old investment.", cost: 40000, type: "income" },
+  { id: "insurance", title: "Insurance Premium", description: "Annual insurance premium due.", cost: 35000, type: "expense" },
 ];
 
 // Yearly events for salary increments
@@ -114,8 +236,13 @@ export const useGameStore = create<GameState>()(
       cash: getInitialState("easy").cash,
       netWorth: getInitialState("easy").cash,
       passiveIncome: 0,
-      investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+      investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+      investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+      stocks: initialStocks,
+      cryptos: initialCryptos,
       events: [],
+      currentEvent: null,
+      showEventModal: false,
       isGameOver: false,
       aiNetWorth: getInitialState("easy").cash,
       gameSpeed: 1,
@@ -140,8 +267,13 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          stocks: { ...initialStocks }, // Reset stocks to initial prices
+          cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
           events: [],
+          currentEvent: null,
+          showEventModal: false,
           isGameOver: false,
           aiNetWorth: initialState.cash,
           gameSpeed: 1,
@@ -162,7 +294,6 @@ export const useGameStore = create<GameState>()(
         }
         
         const newTimeScale = Math.max(0.1, 1 - (elapsedTime / GAME_DURATION) * 0.9);
-        const aiGrowth = state.aiNetWorth * AI_GROWTH_RATE;
 
         // Add basic timer debug every 3 seconds
         if (Math.floor(elapsedTime / 3000) > Math.floor((elapsedTime - 100) / 3000)) {
@@ -174,10 +305,19 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // Random event trigger (after 2 minutes)
-        if (elapsedTime > 120000 && Math.random() < 0.02 * newTimeScale) {
+        // Random event trigger (after 1 minute, more frequent)
+        if (elapsedTime > 60000 && Math.random() < 0.05 * newTimeScale) { // Increased probability
           const event = indianEvents[Math.floor(Math.random() * indianEvents.length)];
-          get().handleEvent(event);
+          console.log(`🎯 Random event triggered: ${event.title}`);
+          // Don't call handleEvent here to avoid triggering modal during advanceTime
+          // Instead, just set the event to be handled by the UI
+          set((state) => ({
+            currentEvent: event,
+            showEventModal: event.type === "expense",
+            events: event.type === "income" ? [...state.events, event] : state.events,
+            cash: event.type === "income" ? state.cash + event.cost : state.cash,
+            netWorth: event.type === "income" ? state.netWorth + event.cost : state.netWorth,
+          }));
         }
 
         // Calculate how many months have passed (each 3 seconds = 1 month in game time for testing)
@@ -196,10 +336,118 @@ export const useGameStore = create<GameState>()(
           let newSalary = state.salary;
           let newExpenses = state.fixedExpenses;
           let newEvents = [...state.events];
+          let newAiNetWorth = state.aiNetWorth;
           
-          // Apply monthly investment returns
-          const monthlyReturns = calculateReturns(state.investments);
-          console.log(`Monthly returns: ₹${monthlyReturns.toLocaleString()}`);
+          // Update stock prices dynamically every month
+          let updatedStocks = { ...state.stocks };
+          Object.entries(updatedStocks).forEach(([symbol, stock]) => {
+            // Generate random price movement within volatility range
+            const randomFactor = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            const priceChange = stock.currentPrice * stock.volatility * randomFactor;
+            const newPrice = Math.max(stock.basePrice * 0.5, stock.currentPrice + priceChange); // Don't go below 50% of base price
+            
+            // Calculate 24h change percentage
+            const change24h = ((newPrice - stock.currentPrice) / stock.currentPrice) * 100;
+            
+            updatedStocks[symbol] = {
+              ...stock,
+              currentPrice: newPrice,
+              change24h: change24h
+            };
+            
+            console.log(`📈 ${stock.symbol}: ₹${stock.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
+          });
+          
+          // Update crypto prices dynamically every month - highly volatile!
+          let updatedCryptos = { ...state.cryptos };
+          Object.entries(updatedCryptos).forEach(([symbol, crypto]) => {
+            // Generate random price movement within volatility range (cryptos are much more volatile)
+            const randomFactor = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            const priceChange = crypto.currentPrice * crypto.volatility * randomFactor;
+            const newPrice = Math.max(crypto.basePrice * 0.3, crypto.currentPrice + priceChange); // Don't go below 30% of base price (more volatile)
+            
+            // Calculate 24h change percentage
+            const change24h = ((newPrice - crypto.currentPrice) / crypto.currentPrice) * 100;
+            
+            updatedCryptos[symbol] = {
+              ...crypto,
+              currentPrice: newPrice,
+              change24h: change24h
+            };
+            
+            console.log(`🪙 ${crypto.symbol}: ₹${crypto.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
+          });
+          
+          // Update stock-based investment returns based on current prices
+          const updatedInvestmentReturns = { ...investmentReturns };
+          Object.entries(updatedStocks).forEach(([assetKey, stock]) => {
+            if (assetKey in updatedInvestmentReturns) {
+              // Calculate return based on price movement from base price
+              const priceGrowthRate = (stock.currentPrice - stock.basePrice) / stock.basePrice;
+              // Convert to annualized return (monthly growth * 12)
+              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+            }
+          });
+          
+          // Update crypto-based investment returns based on current prices
+          Object.entries(updatedCryptos).forEach(([assetKey, crypto]) => {
+            if (assetKey in updatedInvestmentReturns) {
+              // Calculate return based on price movement from base price
+              const priceGrowthRate = (crypto.currentPrice - crypto.basePrice) / crypto.basePrice;
+              // Convert to annualized return (monthly growth * 12)
+              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+            }
+          });
+          
+          // Apply monthly AI growth - AI also gets salary and investment returns like player
+          // BUT: Pause AI growth when player is handling an expense modal
+          if (!state.showEventModal) {
+            // AI gets similar monthly income as player but invests more aggressively
+            const aiMonthlySalary = newSalary / 12; // AI has same salary progression
+            const aiMonthlyExpenses = newExpenses / 12 * 0.8; // AI has 20% lower expenses (more frugal)
+            const aiMonthlyNetIncome = aiMonthlySalary - aiMonthlyExpenses;
+            
+            // AI also gets investment returns (assuming 80% of net worth is invested at 10% annual return)
+            const aiInvestmentReturns = (newAiNetWorth * 0.8) * (0.10 / 12); // 80% invested at 10% annual return
+            
+            const totalAiMonthlyGrowth = aiMonthlyNetIncome + aiInvestmentReturns;
+            newAiNetWorth += totalAiMonthlyGrowth;
+            console.log(`AI monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, investment returns: ₹${aiInvestmentReturns.toLocaleString()}, total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
+            console.log(`AI net worth: ₹${newAiNetWorth.toLocaleString()}`);
+          } else {
+            console.log(`⏸️ AI growth paused during expense modal`);
+          }
+          
+          // Apply monthly investment returns - separate principal from profits
+          let updatedInvestmentProfits = { ...state.investmentProfits };
+          let totalCashDividends = 0;
+          
+          // Calculate returns for each asset based on principal + accumulated profits
+          Object.entries(state.investments).forEach(([asset, principalAmount]) => {
+            if (principalAmount > 0) {
+              const currentProfits = state.investmentProfits[asset as Asset];
+              const totalInvestedValue = principalAmount + currentProfits; // Principal + profits
+              
+              const monthlyReturnRate = investmentReturns[asset as Asset] / 12;
+              const totalMonthlyReturn = totalInvestedValue * monthlyReturnRate;
+              
+              // 70% gets added to profits (compound growth), 30% paid as cash dividend
+              const profitIncrease = totalMonthlyReturn * 0.7;
+              const cashDividend = totalMonthlyReturn * 0.3;
+              
+              updatedInvestmentProfits[asset as Asset] += profitIncrease;
+              totalCashDividends += cashDividend;
+              
+              if (totalMonthlyReturn > 0) {
+                console.log(`${asset}: Principal ₹${principalAmount.toLocaleString()}, Profits ₹${(currentProfits + profitIncrease).toLocaleString()} (+₹${profitIncrease.toLocaleString()}), Cash ₹${cashDividend.toLocaleString()}`);
+              }
+            }
+          });
+          
+          console.log(`Total cash dividends: ₹${totalCashDividends.toLocaleString()}`);
+          
+          // Add cash dividends to player's cash
+          newCash += totalCashDividends;
           
           // Apply monthly salary and expenses (1/12 of annual amounts)
           const monthlySalary = newSalary / 12;
@@ -214,16 +462,16 @@ export const useGameStore = create<GameState>()(
             const adjustedMonthlyExpenses = newExpenses / 12;
             const adjustedMonthlyNetIncome = monthlySalary - adjustedMonthlyExpenses;
             
-            newCash += monthlyReturns + adjustedMonthlyNetIncome;
+            newCash += totalCashDividends + adjustedMonthlyNetIncome;
             console.log(`Adjusted monthly expenses: ₹${adjustedMonthlyExpenses.toLocaleString()}`);
             console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
           } else {
-            newCash += monthlyReturns + monthlyNetIncome;
+            newCash += totalCashDividends + monthlyNetIncome;
             console.log(`Monthly salary: ₹${monthlySalary.toLocaleString()}, Monthly expenses: ₹${monthlyExpenses.toLocaleString()}`);
             console.log(`Monthly net income: ₹${monthlyNetIncome.toLocaleString()}`);
           }
           
-          console.log(`Total cash change: ₹${(monthlyReturns + Math.max(monthlyNetIncome, monthlySalary - newExpenses / 12)).toLocaleString()}`);
+          console.log(`Total cash change: ₹${(totalCashDividends + Math.max(monthlyNetIncome, monthlySalary - newExpenses / 12)).toLocaleString()}`);
           console.log(`New cash: ₹${newCash.toLocaleString()}`);
           
           // Check if we've completed a full year (12 months)
@@ -266,8 +514,10 @@ export const useGameStore = create<GameState>()(
             console.log(`Salary increased to ₹${newSalary.toLocaleString()}, Expenses increased to ₹${newExpenses.toLocaleString()}`);
           }
           
-          // Calculate portfolio value
-          const totalInvestments = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+          // Calculate portfolio value with updated profits
+          const totalPrincipal = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+          const totalProfits = Object.values(updatedInvestmentProfits).reduce((acc, value) => acc + value, 0);
+          const totalInvestments = totalPrincipal + totalProfits;
           const netWorth = Math.max(0, newCash) + totalInvestments;
           
           // Store the current monthly net income for display
@@ -279,32 +529,46 @@ export const useGameStore = create<GameState>()(
             lastProcessedMonth: monthsElapsed,
             cash: Math.max(0, newCash),
             netWorth: netWorth,
+            investments: state.investments, // Principal amounts stay the same
+            investmentProfits: updatedInvestmentProfits, // Only profits change
+            stocks: updatedStocks, // Update stock prices
+            cryptos: updatedCryptos, // Update crypto prices
             salary: newSalary,
             fixedExpenses: newExpenses,
             monthlyNetIncome: currentMonthlyNetIncome,
             events: newEvents,
-            passiveIncome: monthlyReturns,
+            passiveIncome: totalCashDividends,
             currentTime: now,
             timeScale: newTimeScale,
-            aiNetWorth: state.aiNetWorth + aiGrowth,
+            aiNetWorth: newAiNetWorth, // Use the monthly calculated AI growth
           });
         } else {
           // Always update the time-based state even if no month change
           set({
             currentTime: now,
             timeScale: newTimeScale,
-            aiNetWorth: state.aiNetWorth + aiGrowth,
+            // Remove aiNetWorth update here - it should only update monthly
           });
         }
       },
 
       // Handle Events
       handleEvent: (event) => {
-        set((state) => ({
-          cash: Math.max(0, state.cash + (event.type === "income" ? event.cost : -event.cost)),
-          netWorth: Math.max(0, state.netWorth + (event.type === "income" ? event.cost : -event.cost)),
-          events: [...state.events, event],
-        }));
+        // Set current event and show modal for expenses, just add income directly
+        if (event.type === "expense") {
+          set((state) => ({
+            currentEvent: event,
+            showEventModal: true,
+            events: [...state.events, event],
+          }));
+        } else {
+          // Income events are applied directly
+          set((state) => ({
+            cash: Math.max(0, state.cash + event.cost),
+            netWorth: Math.max(0, state.netWorth + event.cost),
+            events: [...state.events, event],
+          }));
+        }
       },
 
       // Invest
@@ -318,17 +582,45 @@ export const useGameStore = create<GameState>()(
 
       // Withdraw
       withdraw: (asset, amount) => {
-        set((state) => ({
-          investments: { ...state.investments, [asset]: Math.max(0, state.investments[asset] - amount) },
-          cash: state.cash + amount,
-        }));
+        set((state) => {
+          const currentPrincipal = state.investments[asset];
+          const currentProfits = state.investmentProfits[asset];
+          const totalValue = currentPrincipal + currentProfits;
+          
+          if (amount > totalValue) {
+            // Can't withdraw more than what you have
+            return state;
+          }
+          
+          // Calculate proportional withdrawal from principal and profits
+          const principalRatio = currentPrincipal / totalValue;
+          const profitRatio = currentProfits / totalValue;
+          
+          const principalWithdrawal = amount * principalRatio;
+          const profitWithdrawal = amount * profitRatio;
+          
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+            },
+            investmentProfits: { 
+              ...state.investmentProfits, 
+              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+            },
+            cash: state.cash + amount,
+          };
+        });
         get().updateNetWorth();
       },
 
       // Update Net Worth
       updateNetWorth: () => {
         set((state) => {
-          const totalInvestments = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+          const totalPrincipal = Object.values(state.investments).reduce((acc, value) => acc + value, 0);
+          const totalProfits = Object.values(state.investmentProfits).reduce((acc, value) => acc + value, 0);
+          const totalInvestments = totalPrincipal + totalProfits;
           return {
             netWorth: state.cash + totalInvestments,
           };
@@ -355,12 +647,202 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0 },
+          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          stocks: { ...initialStocks }, // Reset stocks to initial prices
+          cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
           events: [],
+          currentEvent: null,
+          showEventModal: false,
           isGameOver: false,
           aiNetWorth: initialState.cash,
           gameSpeed: 1,
         });
+      },
+
+      // Stock Trading Functions
+      buyStock: (stockSymbol: string, quantity: number) => {
+        set((state) => {
+          const stock = state.stocks[stockSymbol];
+          if (!stock) return state;
+          
+          const totalCost = stock.currentPrice * quantity;
+          if (totalCost > state.cash) return state; // Not enough cash
+          
+          const asset = stockSymbol as Asset;
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: state.investments[asset] + totalCost 
+            },
+            cash: state.cash - totalCost,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      sellStock: (stockSymbol: string, quantity: number) => {
+        set((state) => {
+          const stock = state.stocks[stockSymbol];
+          if (!stock) return state;
+          
+          const asset = stockSymbol as Asset;
+          const currentPrincipal = state.investments[asset];
+          const currentProfits = state.investmentProfits[asset];
+          
+          // Calculate current shares owned (approximate based on average cost)
+          const totalValue = currentPrincipal + currentProfits;
+          if (totalValue <= 0) return state; // No shares to sell
+          
+          const saleValue = stock.currentPrice * quantity;
+          if (saleValue > totalValue) return state; // Trying to sell more than owned
+          
+          // Calculate proportional withdrawal from principal and profits
+          const principalRatio = currentPrincipal / totalValue;
+          const profitRatio = currentProfits / totalValue;
+          
+          const principalWithdrawal = saleValue * principalRatio;
+          const profitWithdrawal = saleValue * profitRatio;
+          
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+            },
+            investmentProfits: { 
+              ...state.investmentProfits, 
+              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+            },
+            cash: state.cash + saleValue,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      // Crypto Trading Functions
+      buyCrypto: (cryptoSymbol: string, quantity: number) => {
+        set((state) => {
+          const crypto = state.cryptos[cryptoSymbol];
+          if (!crypto) return state;
+          
+          const totalCost = crypto.currentPrice * quantity;
+          if (totalCost > state.cash) return state; // Not enough cash
+          
+          const asset = cryptoSymbol as Asset;
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: state.investments[asset] + totalCost 
+            },
+            cash: state.cash - totalCost,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      sellCrypto: (cryptoSymbol: string, quantity: number) => {
+        set((state) => {
+          const crypto = state.cryptos[cryptoSymbol];
+          if (!crypto) return state;
+          
+          const asset = cryptoSymbol as Asset;
+          const currentPrincipal = state.investments[asset];
+          const currentProfits = state.investmentProfits[asset];
+          
+          // Calculate current coins owned (approximate based on average cost)
+          const totalValue = currentPrincipal + currentProfits;
+          if (totalValue <= 0) return state; // No coins to sell
+          
+          const saleValue = crypto.currentPrice * quantity;
+          if (saleValue > totalValue) return state; // Trying to sell more than owned
+          
+          // Calculate proportional withdrawal from principal and profits
+          const principalRatio = currentPrincipal / totalValue;
+          const profitRatio = currentProfits / totalValue;
+          
+          const principalWithdrawal = saleValue * principalRatio;
+          const profitWithdrawal = saleValue * profitRatio;
+          
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+            },
+            investmentProfits: { 
+              ...state.investmentProfits, 
+              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+            },
+            cash: state.cash + saleValue,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      // Set Current Event
+      setCurrentEvent: (event) => {
+        set({ currentEvent: event });
+      },
+
+      // Set Show Event Modal
+      setShowEventModal: (show) => {
+        set({ showEventModal: show });
+      },
+
+      // Pay for expense with cash
+      payExpenseWithCash: (event: GameEvent) => {
+        set((state) => ({
+          cash: Math.max(0, state.cash - event.cost),
+          netWorth: Math.max(0, state.netWorth - event.cost),
+          events: [...state.events, event],
+          currentEvent: null,
+          showEventModal: false,
+        }));
+      },
+
+      // Pay for expense with investments (auto-withdraw)
+      payExpenseWithInvestments: (event: GameEvent) => {
+        const state = get();
+        let remainingCost = event.cost;
+        let newInvestments = { ...state.investments };
+        let newInvestmentProfits = { ...state.investmentProfits };
+
+        // Withdraw from investments to cover the cost
+        for (const asset of Object.keys(newInvestments) as Asset[]) {
+          const principal = newInvestments[asset];
+          const profits = newInvestmentProfits[asset];
+          const totalValue = principal + profits;
+          
+          if (totalValue > 0 && remainingCost > 0) {
+            const amountToWithdraw = Math.min(totalValue, remainingCost);
+            
+            // Calculate proportional withdrawal
+            const principalRatio = principal / totalValue;
+            const profitRatio = profits / totalValue;
+            
+            const principalWithdrawal = amountToWithdraw * principalRatio;
+            const profitWithdrawal = amountToWithdraw * profitRatio;
+            
+            newInvestments[asset] = Math.max(0, principal - principalWithdrawal);
+            newInvestmentProfits[asset] = Math.max(0, profits - profitWithdrawal);
+            
+            remainingCost -= amountToWithdraw;
+          }
+        }
+
+        set((state) => ({
+          investments: newInvestments,
+          investmentProfits: newInvestmentProfits,
+          cash: Math.max(0, state.cash - remainingCost), // Pay remaining with cash if any
+          events: [...state.events, event],
+          currentEvent: null,
+          showEventModal: false,
+        }));
+        
+        get().updateNetWorth();
       },
     }),
     { name: "finance-sim" }
