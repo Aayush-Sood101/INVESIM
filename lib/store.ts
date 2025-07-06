@@ -187,8 +187,8 @@ const initialRealEstates: Record<string, Stock> = {
   mumbai: {
     symbol: "MUM",
     name: "Mumbai Property",
-    basePrice: 8000000, // ₹80 lakhs per property
-    currentPrice: 8000000,
+    basePrice: 1500000, // ₹15 lakhs per property
+    currentPrice: 1500000,
     change24h: 0,
     volume: 100,
     volatility: 0.08 // 8% volatility - moderate
@@ -196,8 +196,8 @@ const initialRealEstates: Record<string, Stock> = {
   bangalore: {
     symbol: "BLR",
     name: "Bangalore Property",
-    basePrice: 6000000, // ₹60 lakhs per property
-    currentPrice: 6000000,
+    basePrice: 1200000, // ₹12 lakhs per property
+    currentPrice: 1200000,
     change24h: 0,
     volume: 150,
     volatility: 0.10 // 10% volatility
@@ -205,8 +205,8 @@ const initialRealEstates: Record<string, Stock> = {
   delhi: {
     symbol: "DEL",
     name: "Delhi Property",
-    basePrice: 9000000, // ₹90 lakhs per property
-    currentPrice: 9000000,
+    basePrice: 1800000, // ₹18 lakhs per property
+    currentPrice: 1800000,
     change24h: 0,
     volume: 80,
     volatility: 0.07 // 7% volatility - more stable
@@ -214,8 +214,8 @@ const initialRealEstates: Record<string, Stock> = {
   pune: {
     symbol: "PUN",
     name: "Pune Property",
-    basePrice: 4500000, // ₹45 lakhs per property
-    currentPrice: 4500000,
+    basePrice: 900000, // ₹9 lakhs per property
+    currentPrice: 900000,
     change24h: 0,
     volume: 200,
     volatility: 0.12 // 12% volatility
