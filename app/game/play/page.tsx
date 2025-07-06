@@ -312,7 +312,12 @@ export default function GamePlay() {
   };
 
   const getOwnedCoins = (cryptoSymbol: string) => {
-    return cryptoQuantities[cryptoSymbol] || 0;
+    const owned = cryptoQuantities[cryptoSymbol] || 0;
+    // Debug logging - remove after testing
+    if (cryptoSymbol === 'bitcoin' && owned > 0) {
+      console.log(`🔍 DEBUG: Bitcoin owned = ${owned}, cryptoQuantities:`, cryptoQuantities);
+    }
+    return owned;
   };
 
   // Real Estate trading handlers
@@ -478,7 +483,7 @@ export default function GamePlay() {
             </div>
             
             {/* Year labels with milestones for 10 years */}
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
+            <div className="flex justify-between text-xs text-gray-400 mt-9">
               <div className="flex flex-col items-center">
                 <span className="font-jetbrains">Year 0</span>
                 <span className="text-blue-400 font-poppins font-medium">START</span>
@@ -684,18 +689,44 @@ export default function GamePlay() {
                         value={goldQuantity}
                         onChange={(e) => setGoldQuantity(Number(e.target.value))}
                       />
-                      <button
-                        className="w-full bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                        onClick={() => handleGoldInvest(goldQuantity)}
-                      >
-                        Buy Gold
-                      </button>
-                      <button
-                        className="w-full bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                        onClick={() => handleGoldWithdraw(goldQuantity)}
-                      >
-                        Sell Gold
-                      </button>
+                      <div className="flex space-x-1 mt-2">
+                        <button
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleGoldInvest(goldQuantity)}
+                        >
+                          Buy Gold
+                        </button>
+                        <button
+                          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => {
+                            const maxGrams = Math.floor(cash / currentGoldRate);
+                            setGoldQuantity(maxGrams);
+                            handleGoldInvest(maxGrams);
+                          }}
+                          title="Buy maximum gold possible"
+                        >
+                          MAX
+                        </button>
+                      </div>
+                      <div className="flex space-x-1 mt-1">
+                        <button
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleGoldWithdraw(goldQuantity)}
+                        >
+                          Sell Gold
+                        </button>
+                        <button
+                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => {
+                            const totalGold = getTotalValue(option.asset) / currentGoldRate;
+                            setGoldQuantity(Math.floor(totalGold));
+                            handleGoldWithdraw(Math.floor(totalGold));
+                          }}
+                          title="Sell all gold"
+                        >
+                          ALL
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <>
@@ -710,19 +741,37 @@ export default function GamePlay() {
                         }
                       />
 
-                      <button
-                        className="w-full bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded mt-2 text-xs transition duration-300 border-2 border-black"
-                        onClick={() => handleInvest(option.asset, amounts[option.asset] || 0)}
-                      >
-                        Invest
-                      </button>
+                      <div className="flex space-x-1 mt-2">
+                        <button
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleInvest(option.asset, amounts[option.asset] || 0)}
+                        >
+                          Invest
+                        </button>
+                        <button
+                          className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleInvest(option.asset, cash)}
+                          title="Invest all available cash"
+                        >
+                          MAX
+                        </button>
+                      </div>
 
-                      <button
-                        className="w-full bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded mt-2 text-xs transition duration-300 border-2 border-black"
-                        onClick={() => handleWithdraw(option.asset, amounts[option.asset] || 0)}
-                      >
-                        Withdraw
-                      </button>
+                      <div className="flex space-x-1 mt-1">
+                        <button
+                          className="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleWithdraw(option.asset, amounts[option.asset] || 0)}
+                        >
+                          Withdraw
+                        </button>
+                        <button
+                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                          onClick={() => handleWithdraw(option.asset, getTotalValue(option.asset))}
+                          title="Withdraw all investment"
+                        >
+                          ALL
+                        </button>
+                      </div>
                     </>
                   )}
                 </motion.div>
@@ -793,11 +842,35 @@ export default function GamePlay() {
                             BUY
                           </button>
                           <button
+                            className="bg-green-600 hover:bg-green-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                            onClick={() => {
+                              const maxShares = Math.floor(cash / stock.currentPrice);
+                              setStockBuyQuantities((prev) => ({ ...prev, [symbol]: maxShares }));
+                              handleStockBuy(symbol, maxShares);
+                            }}
+                            title="Buy maximum shares possible"
+                          >
+                            MAX
+                          </button>
+                        </div>
+                        <div className="flex space-x-1 mt-1">
+                          <button
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
                             onClick={() => handleStockSell(symbol, stockBuyQuantities[symbol] || 0)}
                             disabled={ownedShares === 0}
                           >
                             SELL
+                          </button>
+                          <button
+                            className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                            onClick={() => {
+                              setStockBuyQuantities((prev) => ({ ...prev, [symbol]: ownedShares }));
+                              handleStockSell(symbol, ownedShares);
+                            }}
+                            disabled={ownedShares === 0}
+                            title="Sell all shares"
+                          >
+                            ALL
                           </button>
                         </div>
                       </div>
@@ -872,11 +945,35 @@ export default function GamePlay() {
                             BUY
                           </button>
                           <button
+                            className="bg-green-600 hover:bg-green-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-green-800"
+                            onClick={() => {
+                              const maxCoins = Math.floor((cash / crypto.currentPrice) * 10) / 10; // Round to 1 decimal
+                              setCryptoBuyQuantities((prev) => ({ ...prev, [symbol]: maxCoins }));
+                              handleCryptoBuy(symbol, maxCoins);
+                            }}
+                            title="Buy maximum coins possible"
+                          >
+                            MAX
+                          </button>
+                        </div>
+                        <div className="flex space-x-1 mt-1">
+                          <button
                             className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
                             onClick={() => handleCryptoSell(symbol, cryptoBuyQuantities[symbol] || 0)}
                             disabled={ownedCoins === 0}
                           >
                             SELL
+                          </button>
+                          <button
+                            className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
+                            onClick={() => {
+                              setCryptoBuyQuantities((prev) => ({ ...prev, [symbol]: ownedCoins }));
+                              handleCryptoSell(symbol, ownedCoins);
+                            }}
+                            disabled={ownedCoins === 0}
+                            title="Sell all coins"
+                          >
+                            ALL
                           </button>
                         </div>
                       </div>
@@ -950,11 +1047,35 @@ export default function GamePlay() {
                             BUY
                           </button>
                           <button
+                            className="bg-green-600 hover:bg-green-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-green-800"
+                            onClick={() => {
+                              const maxProperties = Math.floor(cash / realEstate.currentPrice);
+                              setRealEstateBuyQuantities((prev) => ({ ...prev, [symbol]: maxProperties }));
+                              handleRealEstateBuy(symbol, maxProperties);
+                            }}
+                            title="Buy maximum properties possible"
+                          >
+                            MAX
+                          </button>
+                        </div>
+                        <div className="flex space-x-1 mt-1">
+                          <button
                             className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
                             onClick={() => handleRealEstateSell(symbol, realEstateBuyQuantities[symbol] || 0)}
                             disabled={ownedProperties === 0}
                           >
                             SELL
+                          </button>
+                          <button
+                            className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
+                            onClick={() => {
+                              setRealEstateBuyQuantities((prev) => ({ ...prev, [symbol]: ownedProperties }));
+                              handleRealEstateSell(symbol, ownedProperties);
+                            }}
+                            disabled={ownedProperties === 0}
+                            title="Sell all properties"
+                          >
+                            ALL
                           </button>
                         </div>
                       </div>

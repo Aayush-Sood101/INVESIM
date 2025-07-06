@@ -59,6 +59,7 @@ export type GameState = {
   isPaused: boolean; // Whether the game is currently paused
   gameTime: number; // Game time that doesn't advance when paused
   lastAdvanceTime: number; // Last time we actually advanced the game
+  lastEventTime: number; // Last time an event was triggered (in game time)
   setPaused: (paused: boolean) => void; // Function to set pause state
   setDifficulty: (difficulty: Difficulty) => void;
   initializeGame: () => void;
@@ -281,7 +282,7 @@ const getAISettings = (difficulty: Difficulty) => {
 // Indian Themed Game Events
 const indianEvents: GameEvent[] = [
   { id: "wedding", title: "Family Wedding", description: "Contribute to a family wedding celebration.", cost: 100000, type: "expense" },
-  { id: "festival", title: "Diwali Bonus", description: "You received a festival bonus from your company!", cost: 50000, type: "income" },
+  { id: "festival", title: "Annual Bonus", description: "You received your annual performance bonus from your company!", cost: 50000, type: "income" },
   { id: "medical", title: "Medical Emergency", description: "Unexpected hospital bill for family member.", cost: 75000, type: "expense" },
   { id: "electricity", title: "High Electricity Bill", description: "Summer AC usage resulted in high electricity bill.", cost: 15000, type: "expense" },
   { id: "vehicle", title: "Vehicle Repair", description: "Your vehicle needs major repairs.", cost: 30000, type: "expense" },
@@ -323,6 +324,7 @@ export const useGameStore = create<GameState>()(
       isPaused: false, // Whether the game is currently paused
       gameTime: 0, // Game time that doesn't advance when paused
       lastAdvanceTime: 0, // Last time we actually advanced the game
+      lastEventTime: 0, // Last time an event was triggered (in game time)
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
@@ -361,6 +363,7 @@ export const useGameStore = create<GameState>()(
           currentTime: now,
           gameTime: 0,
           lastAdvanceTime: now,
+          lastEventTime: 0,
           startDate: new Date(),
           currentDate: new Date(),
           lastProcessedMonth: 0,
@@ -374,6 +377,9 @@ export const useGameStore = create<GameState>()(
           stocks: { ...initialStocks }, // Reset stocks to initial prices
           cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
           realEstates: { ...initialRealEstates }, // Reset real estate to initial prices
+          stockQuantities: { reliance: 0, tcs: 0, hdfc: 0, infosys: 0 },
+          cryptoQuantities: { bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          realEstateQuantities: { mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
           events: [],
           currentEvent: null,
           showEventModal: false,
@@ -416,7 +422,7 @@ export const useGameStore = create<GameState>()(
 
         // Add basic timer debug every 3 seconds
         if (Math.floor(newGameTime / 3000) > Math.floor(state.gameTime / 3000)) {
-          console.log(`Timer running - Game Time: ${Math.floor(newGameTime/1000)}s, Real Time: ${Math.floor((now - state.startTime)/1000)}s, Cash: ₹${state.cash.toLocaleString()}`);
+          // Timer running silently - reduced logging for better performance
         }
 
         if (newGameTime >= GAME_DURATION) {
@@ -424,44 +430,47 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // Random event trigger - reduced frequency for expense events (max 1-2 per year)
-        // Only trigger expense events if it's been at least 18-36 seconds (6-12 months) since last one
+        // Random event trigger with 15-second minimum interval
+        // Only trigger events if it's been at least 15 seconds since the last event
         if (newGameTime > 60000) { // After 1 minute
-          const monthsElapsed = Math.floor(newGameTime / 5000); // 5 seconds = 1 month
-          const lastExpenseMonth = state.events.length > 0 ? 
-            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? newGameTime - 18000 : 0) / 5000) : 0;
+          const timeSinceLastEvent = newGameTime - state.lastEventTime;
+          const minEventInterval = 15000; // 15 seconds minimum between events
           
-          // Only allow expense events if it's been at least 6 months since last expense
-          const monthsSinceLastExpense = monthsElapsed - lastExpenseMonth;
-          const shouldTriggerExpense = monthsSinceLastExpense >= 6 && Math.random() < 0.003; // Very low probability
-          
-          if (shouldTriggerExpense) {
-            // Filter to only expense events for reduced frequency
-            const expenseEvents = indianEvents.filter(event => event.type === "expense");
-            const event = expenseEvents[Math.floor(Math.random() * expenseEvents.length)];
-            console.log(`🎯 Expense event triggered: ${event.title} (months since last: ${monthsSinceLastExpense})`);
+          // Only check for events if enough time has passed since the last one
+          if (timeSinceLastEvent >= minEventInterval) {
+            // Reduced probability for expense events
+            const shouldTriggerExpense = Math.random() < 0.002; // Very low probability
             
-            set((state) => ({
-              currentEvent: event,
-              showEventModal: true,
-              events: [...state.events, { ...event, id: 'expense' }], // Mark as expense for tracking
-            }));
-          }
-          
-          // Income events can be more frequent but still reduced
-          else if (Math.random() < 0.01) { // 1% probability for income events
-            const incomeEvents = indianEvents.filter(event => event.type === "income");
-            if (incomeEvents.length > 0) {
-              const event = incomeEvents[Math.floor(Math.random() * incomeEvents.length)];
-              console.log(`🎯 Income event triggered: ${event.title}`);
+            if (shouldTriggerExpense) {
+              // Filter to only expense events
+              const expenseEvents = indianEvents.filter(event => event.type === "expense");
+              const event = expenseEvents[Math.floor(Math.random() * expenseEvents.length)];
+              
               set((state) => ({
                 currentEvent: event,
-                showEventModal: true, // Show modal for income events too!
-                events: [...state.events, event],
-                cash: state.cash + event.cost,
-                netWorth: state.netWorth + event.cost,
+                showEventModal: true,
+                lastEventTime: newGameTime, // Update last event time
+                events: [...state.events, { ...event, id: 'expense' }], // Mark as expense for tracking
               }));
             }
+            // Income events with slightly higher probability but still controlled
+            else if (Math.random() < 0.005) { // Slightly higher probability for income events
+              const incomeEvents = indianEvents.filter(event => event.type === "income");
+              if (incomeEvents.length > 0) {
+                const event = incomeEvents[Math.floor(Math.random() * incomeEvents.length)];
+                set((state) => ({
+                  currentEvent: event,
+                  showEventModal: true, // Show modal for income events too!
+                  lastEventTime: newGameTime, // Update last event time
+                  events: [...state.events, event],
+                  cash: state.cash + event.cost,
+                  netWorth: state.netWorth + event.cost,
+                }));
+              }
+            }
+          } else {
+            // Silently block events that are too frequent
+            // Events will try again on the next game loop
           }
         }
 
@@ -476,7 +485,7 @@ export const useGameStore = create<GameState>()(
 
         // Only process if we've moved to a new month
         if (monthsElapsed > state.lastProcessedMonth) {
-          console.log(`Processing month ${monthsElapsed} (last processed: ${state.lastProcessedMonth})`);
+          // Processing new month silently
           
           let newCash = state.cash;
           let newSalary = state.salary;
@@ -500,8 +509,6 @@ export const useGameStore = create<GameState>()(
               currentPrice: newPrice,
               change24h: change24h
             };
-            
-            console.log(`📈 ${stock.symbol}: ₹${stock.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
           });
           
           // Update crypto prices dynamically every month - highly volatile!
@@ -520,8 +527,6 @@ export const useGameStore = create<GameState>()(
               currentPrice: newPrice,
               change24h: change24h
             };
-            
-            console.log(`🪙 ${crypto.symbol}: ₹${crypto.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
           });
           
           // Update real estate prices dynamically every month - moderate volatility
@@ -540,8 +545,6 @@ export const useGameStore = create<GameState>()(
               currentPrice: newPrice,
               change24h: change24h
             };
-            
-            console.log(`🏠 ${realEstate.symbol}: ₹${realEstate.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
           });
           
           // Update stock-based investment returns based on current prices
@@ -609,18 +612,12 @@ export const useGameStore = create<GameState>()(
               
               const bonusEvent = bonusTypes[Math.floor(Math.random() * bonusTypes.length)];
               aiMonthlyBonus = newAiNetWorth * bonusEvent.multiplier;
-              
-              console.log(`🤖💰 AI Bonus Event: ${bonusEvent.name} - ₹${aiMonthlyBonus.toLocaleString()}`);
             }
             
             const totalAiMonthlyGrowth = aiMonthlyNetIncome + aiInvestmentReturns + aiMonthlyBonus;
             newAiNetWorth = Math.max(0, newAiNetWorth + totalAiMonthlyGrowth); // Prevent negative net worth
-            
-            const returnStatus = aiInvestmentReturns >= 0 ? "profit" : "loss";
-            console.log(`🤖 AI (${state.difficulty}): Monthly income: ₹${aiMonthlyNetIncome.toLocaleString()}, Investment ${returnStatus}: ₹${aiInvestmentReturns.toLocaleString()}, Bonus: ₹${aiMonthlyBonus.toLocaleString()}, Total growth: ₹${totalAiMonthlyGrowth.toLocaleString()}`);
-            console.log(`🤖 AI net worth: ₹${newAiNetWorth.toLocaleString()}`);
           } else {
-            console.log(`⏸️ AI growth paused during expense modal`);
+            // AI growth paused during expense modal
           }
           
           // Apply monthly investment returns - separate principal from profits
@@ -650,16 +647,10 @@ export const useGameStore = create<GameState>()(
               
               updatedInvestmentProfits[asset as Asset] += profitIncrease;
               totalCashDividends += cashDividend;
-              
-              if (totalMonthlyReturn > 0) {
-                console.log(`${asset}: Principal ₹${principalAmount.toLocaleString()}, Profits ₹${(currentProfits + profitIncrease).toLocaleString()} (+₹${profitIncrease.toLocaleString()}), Cash ₹${cashDividend.toLocaleString()}`);
-              }
             }
           });
           
-          console.log(`Total cash dividends: ₹${totalCashDividends.toLocaleString()}`);
-          
-          // Add cash dividends to player's cash
+          // Add cash dividends to player's cash (silently)
           newCash += totalCashDividends;
           
           // Apply monthly salary and expenses (1/12 of annual amounts)
@@ -680,23 +671,14 @@ export const useGameStore = create<GameState>()(
             console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
           } else {
             newCash += totalCashDividends + monthlyNetIncome;
-            const currentYear = Math.floor(monthsElapsed / 12);
-            const currentMonth = (monthsElapsed % 12) + 1;
-            console.log(`💰 Year ${currentYear}, Month ${currentMonth}: Salary: ₹${monthlySalary.toLocaleString()}, Expenses: ₹${monthlyExpenses.toLocaleString()}, Net: ₹${monthlyNetIncome.toLocaleString()}`);
           }
-          
-          console.log(`Total cash change: ₹${(totalCashDividends + Math.max(monthlyNetIncome, monthlySalary - newExpenses / 12)).toLocaleString()}`);
-          console.log(`New cash: ₹${newCash.toLocaleString()}`);
           
           // Check if we've completed a full year (12 months)
           const isYearEnd = monthsElapsed > 0 && monthsElapsed % 12 === 0;
           
           if (isYearEnd) {
-            console.log(`🎉 YEAR END! Month: ${monthsElapsed}, Current cash: ₹${newCash.toLocaleString()}`);
-            
             // Calculate which year we just completed
             const completedYear = Math.floor(monthsElapsed / 12);
-            console.log(`Completed year: ${completedYear}`);
             
             // At year end, we just increment salary and expenses for next year
             // (We've already been paying monthly throughout the year)
@@ -711,11 +693,6 @@ export const useGameStore = create<GameState>()(
             newSalary += salaryIncrement;
             newExpenses += expenseIncrement;
             
-            console.log(`Year ${completedYear} salary increment: +₹${salaryIncrement.toLocaleString()}`);
-            console.log(`Year ${completedYear} expense increment: +₹${expenseIncrement.toLocaleString()}`);
-            console.log(`New annual salary: ₹${newSalary.toLocaleString()}, New annual expenses: ₹${newExpenses.toLocaleString()}`);
-            console.log(`New monthly net income: ₹${((newSalary - newExpenses) / 12).toLocaleString()}`);
-            
             // Add salary increment event
             newEvents.push({
               id: Date.now().toString(),
@@ -725,13 +702,9 @@ export const useGameStore = create<GameState>()(
               type: "income"
             });
             
-            console.log(`Salary increased to ₹${newSalary.toLocaleString()}, Expenses increased to ₹${newExpenses.toLocaleString()}`);
-            
             // AI Yearly Performance Bonus - AI gets smart about major financial decisions
             const aiYearlyBonus = newAiNetWorth * 0.12; // 12% of net worth as yearly bonus
             newAiNetWorth += aiYearlyBonus;
-            console.log(`🤖🎉 AI Yearly Performance Bonus: ₹${aiYearlyBonus.toLocaleString()}`);
-            console.log(`🤖 AI net worth after yearly bonus: ₹${newAiNetWorth.toLocaleString()}`);
           }
           
           // Calculate portfolio value with updated profits
@@ -864,6 +837,9 @@ export const useGameStore = create<GameState>()(
         set({
           startTime: 0,
           currentTime: 0,
+          gameTime: 0,
+          lastAdvanceTime: 0,
+          lastEventTime: 0,
           startDate: new Date(),
           currentDate: new Date(),
           lastProcessedMonth: 0,
@@ -877,6 +853,9 @@ export const useGameStore = create<GameState>()(
           stocks: { ...initialStocks }, // Reset stocks to initial prices
           cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
           realEstates: { ...initialRealEstates }, // Reset real estate to initial prices
+          stockQuantities: { reliance: 0, tcs: 0, hdfc: 0, infosys: 0 },
+          cryptoQuantities: { bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          realEstateQuantities: { mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
           events: [],
           currentEvent: null,
           showEventModal: false,
