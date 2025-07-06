@@ -235,13 +235,13 @@ const initialRealEstates: Record<string, Stock> = {
 const getInitialState = (difficulty: Difficulty) => {
   switch (difficulty) {
     case "easy":
-      return { salary: 720000, fixedExpenses: 300000, cash: 200000, passiveIncomeTarget: 480000, timeLimit: 10 }; // ₹60k/month salary, ₹25k/month expenses
+      return { salary: 720000, fixedExpenses: 0, cash: 200000, passiveIncomeTarget: 480000, timeLimit: 10 }; // ₹60k/month salary, no expenses
     case "medium":
-      return { salary: 600000, fixedExpenses: 300000, cash: 150000, passiveIncomeTarget: 540000, timeLimit: 10 }; // ₹50k/month salary, ₹25k/month expenses  
+      return { salary: 600000, fixedExpenses: 0, cash: 150000, passiveIncomeTarget: 540000, timeLimit: 10 }; // ₹50k/month salary, no expenses
     case "hard":
-      return { salary: 480000, fixedExpenses: 300000, cash: 100000, passiveIncomeTarget: 600000, timeLimit: 10 }; // ₹40k/month salary, ₹25k/month expenses
+      return { salary: 480000, fixedExpenses: 0, cash: 100000, passiveIncomeTarget: 600000, timeLimit: 10 }; // ₹40k/month salary, no expenses
     default:
-      return { salary: 480000, fixedExpenses: 300000, cash: 140000, passiveIncomeTarget: 600000, timeLimit: 10 };
+      return { salary: 480000, fixedExpenses: 0, cash: 140000, passiveIncomeTarget: 600000, timeLimit: 10 };
   }
 };
 
@@ -251,21 +251,21 @@ const getAISettings = (difficulty: Difficulty) => {
     case "easy":
       return { 
         baseReturnRate: 0.10, // 10% base annual return (boosted from 8%)
-        expenseMultiplier: 0.85, // 85% of player expenses (more frugal)
+        expenseMultiplier: 0.0, // No expenses for AI
         investmentRatio: 0.65, // 65% of net worth invested (increased)
         volatility: 0.15 // 15% volatility - can have losses
       };
     case "medium":
       return { 
         baseReturnRate: 0.15, // 15% base annual return (boosted from 12%)
-        expenseMultiplier: 0.75, // 75% of player expenses (more frugal)
+        expenseMultiplier: 0.0, // No expenses for AI
         investmentRatio: 0.80, // 80% of net worth invested (increased)
         volatility: 0.20 // 20% volatility - more losses possible
       };
     case "hard":
       return { 
         baseReturnRate: 0.20, // 20% base annual return (boosted from 16%)
-        expenseMultiplier: 0.65, // 65% of player expenses (very frugal)
+        expenseMultiplier: 0.0, // No expenses for AI
         investmentRatio: 0.90, // 90% of net worth invested (increased)
         volatility: 0.25 // 25% volatility - significant losses possible
       };
@@ -489,7 +489,6 @@ export const useGameStore = create<GameState>()(
           
           let newCash = state.cash;
           let newSalary = state.salary;
-          let newExpenses = state.fixedExpenses;
           let newEvents = [...state.events];
           let newAiNetWorth = state.aiNetWorth;
           
@@ -583,10 +582,9 @@ export const useGameStore = create<GameState>()(
           if (!state.showEventModal) {
             const aiSettings = getAISettings(state.difficulty);
             
-            // AI gets similar monthly income as player but with different expense patterns
+            // AI gets same monthly income as player (no expenses)
             const aiMonthlySalary = newSalary / 12; // AI has same salary progression
-            const aiMonthlyExpenses = newExpenses / 12 * aiSettings.expenseMultiplier;
-            const aiMonthlyNetIncome = aiMonthlySalary - aiMonthlyExpenses;
+            const aiMonthlyNetIncome = aiMonthlySalary; // Full salary since no expenses
             
             // AI investment returns with volatility - can have losses!
             const aiInvestedAmount = newAiNetWorth * aiSettings.investmentRatio;
@@ -653,25 +651,11 @@ export const useGameStore = create<GameState>()(
           // Add cash dividends to player's cash (silently)
           newCash += totalCashDividends;
           
-          // Apply monthly salary and expenses (1/12 of annual amounts)
+          // Apply monthly salary (full salary with no expenses)
           const monthlySalary = newSalary / 12;
-          const monthlyExpenses = newExpenses / 12;
-          const monthlyNetIncome = monthlySalary - monthlyExpenses;
+          const monthlyNetIncome = monthlySalary; // Full salary since no expenses
           
-          // Safety check: ensure we don't have negative monthly income (unrealistic)
-          if (monthlyNetIncome < 0) {
-            console.warn(`⚠️ Monthly net income is negative: ₹${monthlyNetIncome.toLocaleString()}. Adjusting expenses.`);
-            // Reduce expenses to ensure at least ₹1000 monthly net income
-            newExpenses = Math.max(0, newSalary - 12000); // Ensure ₹1000/month minimum
-            const adjustedMonthlyExpenses = newExpenses / 12;
-            const adjustedMonthlyNetIncome = monthlySalary - adjustedMonthlyExpenses;
-            
-            newCash += totalCashDividends + adjustedMonthlyNetIncome;
-            console.log(`Adjusted monthly expenses: ₹${adjustedMonthlyExpenses.toLocaleString()}`);
-            console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
-          } else {
-            newCash += totalCashDividends + monthlyNetIncome;
-          }
+          newCash += totalCashDividends + monthlyNetIncome;
           
           // Check if we've completed a full year (12 months)
           const isYearEnd = monthsElapsed > 0 && monthsElapsed % 12 === 0;
@@ -684,14 +668,10 @@ export const useGameStore = create<GameState>()(
             // (We've already been paying monthly throughout the year)
             const salaryIncrementRate = state.difficulty === 'easy' ? 0.08 : 
                                       state.difficulty === 'medium' ? 0.06 : 0.05;
-            const expenseIncrementRate = state.difficulty === 'easy' ? 0.03 : 
-                                       state.difficulty === 'medium' ? 0.04 : 0.05; // Lower expense growth for easy mode
             
             const salaryIncrement = newSalary * salaryIncrementRate;
-            const expenseIncrement = newExpenses * expenseIncrementRate;
             
             newSalary += salaryIncrement;
-            newExpenses += expenseIncrement;
             
             // Add salary increment event
             newEvents.push({
@@ -713,8 +693,8 @@ export const useGameStore = create<GameState>()(
           const totalInvestments = totalPrincipal + totalProfits;
           const netWorth = Math.max(0, newCash) + totalInvestments;
           
-          // Store the current monthly net income for display
-          const currentMonthlyNetIncome = (newSalary - newExpenses) / 12;
+          // Store the current monthly net income for display (full salary since no expenses)
+          const currentMonthlyNetIncome = newSalary / 12;
           
           // Update state with new month processed
           set({
@@ -728,7 +708,7 @@ export const useGameStore = create<GameState>()(
             cryptos: updatedCryptos, // Update crypto prices
             realEstates: updatedRealEstates, // Update real estate prices
             salary: newSalary,
-            fixedExpenses: newExpenses,
+            fixedExpenses: 0, // Always 0 since no expenses
             monthlyNetIncome: currentMonthlyNetIncome,
             events: newEvents,
             passiveIncome: totalCashDividends,
