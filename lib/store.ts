@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 // Types
 export type Difficulty = "easy" | "medium" | "hard";
-export type Asset = "savings" | "fixedDeposit" | "nifty50" | "gold" | "realestate" | "crypto" | "reliance" | "tcs" | "hdfc" | "infosys" | "bitcoin" | "ethereum" | "cardano" | "polygon";
+export type Asset = "savings" | "fixedDeposit" | "nifty50" | "gold" | "realestate" | "crypto" | "reliance" | "tcs" | "hdfc" | "infosys" | "bitcoin" | "ethereum" | "cardano" | "polygon" | "mumbai" | "bangalore" | "delhi" | "pune";
 
 export type Stock = {
   symbol: string;
@@ -34,6 +34,7 @@ export type GameState = {
   investmentProfits: Record<Asset, number>; // Accumulated profits/returns
   stocks: Record<string, Stock>; // Stock market data
   cryptos: Record<string, Stock>; // Crypto market data
+  realEstates: Record<string, Stock>; // Real estate market data
   events: GameEvent[];
   currentEvent: GameEvent | null; // Current event being displayed
   showEventModal: boolean; // Whether to show event modal
@@ -67,6 +68,8 @@ export type GameState = {
   sellStock: (stockSymbol: string, quantity: number) => void;
   buyCrypto: (cryptoSymbol: string, quantity: number) => void;
   sellCrypto: (cryptoSymbol: string, quantity: number) => void;
+  buyRealEstate: (realEstateSymbol: string, quantity: number) => void;
+  sellRealEstate: (realEstateSymbol: string, quantity: number) => void;
 };
 
 // Constants
@@ -92,6 +95,11 @@ const investmentReturns: Record<Asset, number> = {
   ethereum: 0.30,
   cardano: 0.35,
   polygon: 0.40,
+  // Individual real estate properties
+  mumbai: 0.18,
+  bangalore: 0.16,
+  delhi: 0.17,
+  pune: 0.15,
 };
 
 // Initial stock data
@@ -174,6 +182,46 @@ const initialCryptos: Record<string, Stock> = {
   }
 };
 
+// Initial real estate properties
+const initialRealEstates: Record<string, Stock> = {
+  mumbai: {
+    symbol: "MUM",
+    name: "Mumbai Property",
+    basePrice: 8000000, // ₹80 lakhs per property
+    currentPrice: 8000000,
+    change24h: 0,
+    volume: 100,
+    volatility: 0.08 // 8% volatility - moderate
+  },
+  bangalore: {
+    symbol: "BLR",
+    name: "Bangalore Property",
+    basePrice: 6000000, // ₹60 lakhs per property
+    currentPrice: 6000000,
+    change24h: 0,
+    volume: 150,
+    volatility: 0.10 // 10% volatility
+  },
+  delhi: {
+    symbol: "DEL",
+    name: "Delhi Property",
+    basePrice: 9000000, // ₹90 lakhs per property
+    currentPrice: 9000000,
+    change24h: 0,
+    volume: 80,
+    volatility: 0.07 // 7% volatility - more stable
+  },
+  pune: {
+    symbol: "PUN",
+    name: "Pune Property",
+    basePrice: 4500000, // ₹45 lakhs per property
+    currentPrice: 4500000,
+    change24h: 0,
+    volume: 200,
+    volatility: 0.12 // 12% volatility
+  }
+};
+
 // Get Initial State Based on Difficulty
 const getInitialState = (difficulty: Difficulty) => {
   switch (difficulty) {
@@ -236,10 +284,11 @@ export const useGameStore = create<GameState>()(
       cash: getInitialState("easy").cash,
       netWorth: getInitialState("easy").cash,
       passiveIncome: 0,
-      investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
-      investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+      investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
+      investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
       stocks: initialStocks,
       cryptos: initialCryptos,
+      realEstates: initialRealEstates,
       events: [],
       currentEvent: null,
       showEventModal: false,
@@ -267,10 +316,11 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
-          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
+          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
           stocks: { ...initialStocks }, // Reset stocks to initial prices
           cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
+          realEstates: { ...initialRealEstates }, // Reset real estate to initial prices
           events: [],
           currentEvent: null,
           showEventModal: false,
@@ -305,19 +355,45 @@ export const useGameStore = create<GameState>()(
           return;
         }
 
-        // Random event trigger (after 1 minute, more frequent)
-        if (elapsedTime > 60000 && Math.random() < 0.05 * newTimeScale) { // Increased probability
-          const event = indianEvents[Math.floor(Math.random() * indianEvents.length)];
-          console.log(`🎯 Random event triggered: ${event.title}`);
-          // Don't call handleEvent here to avoid triggering modal during advanceTime
-          // Instead, just set the event to be handled by the UI
-          set((state) => ({
-            currentEvent: event,
-            showEventModal: event.type === "expense",
-            events: event.type === "income" ? [...state.events, event] : state.events,
-            cash: event.type === "income" ? state.cash + event.cost : state.cash,
-            netWorth: event.type === "income" ? state.netWorth + event.cost : state.netWorth,
-          }));
+        // Random event trigger - reduced frequency for expense events (max 1-2 per year)
+        // Only trigger expense events if it's been at least 18-36 seconds (6-12 months) since last one
+        if (elapsedTime > 60000) { // After 1 minute
+          const monthsElapsed = Math.floor(elapsedTime / 3000); // 3 seconds = 1 month
+          const lastExpenseMonth = state.events.length > 0 ? 
+            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 3000) : 0;
+          
+          // Only allow expense events if it's been at least 6 months since last expense
+          const monthsSinceLastExpense = monthsElapsed - lastExpenseMonth;
+          const shouldTriggerExpense = monthsSinceLastExpense >= 6 && Math.random() < 0.003; // Very low probability
+          
+          if (shouldTriggerExpense) {
+            // Filter to only expense events for reduced frequency
+            const expenseEvents = indianEvents.filter(event => event.type === "expense");
+            const event = expenseEvents[Math.floor(Math.random() * expenseEvents.length)];
+            console.log(`🎯 Expense event triggered: ${event.title} (months since last: ${monthsSinceLastExpense})`);
+            
+            set((state) => ({
+              currentEvent: event,
+              showEventModal: true,
+              events: [...state.events, { ...event, id: 'expense' }], // Mark as expense for tracking
+            }));
+          }
+          
+          // Income events can be more frequent but still reduced
+          else if (Math.random() < 0.01) { // 1% probability for income events
+            const incomeEvents = indianEvents.filter(event => event.type === "income");
+            if (incomeEvents.length > 0) {
+              const event = incomeEvents[Math.floor(Math.random() * incomeEvents.length)];
+              console.log(`🎯 Income event triggered: ${event.title}`);
+              set((state) => ({
+                currentEvent: event,
+                showEventModal: false,
+                events: [...state.events, event],
+                cash: state.cash + event.cost,
+                netWorth: state.netWorth + event.cost,
+              }));
+            }
+          }
         }
 
         // Calculate how many months have passed (each 3 seconds = 1 month in game time for testing)
@@ -378,6 +454,26 @@ export const useGameStore = create<GameState>()(
             console.log(`🪙 ${crypto.symbol}: ₹${crypto.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
           });
           
+          // Update real estate prices dynamically every month - moderate volatility
+          let updatedRealEstates = { ...state.realEstates };
+          Object.entries(updatedRealEstates).forEach(([symbol, realEstate]) => {
+            // Generate random price movement within volatility range (real estate is less volatile than crypto)
+            const randomFactor = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            const priceChange = realEstate.currentPrice * realEstate.volatility * randomFactor;
+            const newPrice = Math.max(realEstate.basePrice * 0.7, realEstate.currentPrice + priceChange); // Don't go below 70% of base price
+            
+            // Calculate 24h change percentage
+            const change24h = ((newPrice - realEstate.currentPrice) / realEstate.currentPrice) * 100;
+            
+            updatedRealEstates[symbol] = {
+              ...realEstate,
+              currentPrice: newPrice,
+              change24h: change24h
+            };
+            
+            console.log(`🏠 ${realEstate.symbol}: ₹${realEstate.currentPrice.toFixed(2)} → ₹${newPrice.toFixed(2)} (${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`);
+          });
+          
           // Update stock-based investment returns based on current prices
           const updatedInvestmentReturns = { ...investmentReturns };
           Object.entries(updatedStocks).forEach(([assetKey, stock]) => {
@@ -394,6 +490,16 @@ export const useGameStore = create<GameState>()(
             if (assetKey in updatedInvestmentReturns) {
               // Calculate return based on price movement from base price
               const priceGrowthRate = (crypto.currentPrice - crypto.basePrice) / crypto.basePrice;
+              // Convert to annualized return (monthly growth * 12)
+              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+            }
+          });
+          
+          // Update real estate-based investment returns based on current prices
+          Object.entries(updatedRealEstates).forEach(([assetKey, realEstate]) => {
+            if (assetKey in updatedInvestmentReturns) {
+              // Calculate return based on price movement from base price
+              const priceGrowthRate = (realEstate.currentPrice - realEstate.basePrice) / realEstate.basePrice;
               // Convert to annualized return (monthly growth * 12)
               updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
             }
@@ -533,6 +639,7 @@ export const useGameStore = create<GameState>()(
             investmentProfits: updatedInvestmentProfits, // Only profits change
             stocks: updatedStocks, // Update stock prices
             cryptos: updatedCryptos, // Update crypto prices
+            realEstates: updatedRealEstates, // Update real estate prices
             salary: newSalary,
             fixedExpenses: newExpenses,
             monthlyNetIncome: currentMonthlyNetIncome,
@@ -647,10 +754,11 @@ export const useGameStore = create<GameState>()(
           cash: initialState.cash,
           netWorth: initialState.cash,
           passiveIncome: 0,
-          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
-          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+          investments: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
+          investmentProfits: { savings: 0, fixedDeposit: 0, nifty50: 0, gold: 0, realestate: 0, crypto: 0, reliance: 0, tcs: 0, hdfc: 0, infosys: 0, bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0, mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
           stocks: { ...initialStocks }, // Reset stocks to initial prices
           cryptos: { ...initialCryptos }, // Reset cryptos to initial prices
+          realEstates: { ...initialRealEstates }, // Reset real estate to initial prices
           events: [],
           currentEvent: null,
           showEventModal: false,
@@ -757,6 +865,68 @@ export const useGameStore = create<GameState>()(
           if (totalValue <= 0) return state; // No coins to sell
           
           const saleValue = crypto.currentPrice * quantity;
+          if (saleValue > totalValue) return state; // Trying to sell more than owned
+          
+          // Calculate proportional withdrawal from principal and profits
+          const principalRatio = currentPrincipal / totalValue;
+          const profitRatio = currentProfits / totalValue;
+          
+          const principalWithdrawal = saleValue * principalRatio;
+          const profitWithdrawal = saleValue * profitRatio;
+          
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+            },
+            investmentProfits: { 
+              ...state.investmentProfits, 
+              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+            },
+            cash: state.cash + saleValue,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      // Buy Real Estate
+      buyRealEstate: (realEstateSymbol: string, quantity: number) => {
+        set((state) => {
+          const realEstate = state.realEstates[realEstateSymbol];
+          if (!realEstate) return state;
+          
+          const totalCost = realEstate.currentPrice * quantity;
+          if (totalCost > state.cash) return state;
+          
+          const asset = realEstateSymbol as Asset;
+          
+          return {
+            ...state,
+            investments: { 
+              ...state.investments, 
+              [asset]: (state.investments[asset] || 0) + totalCost 
+            },
+            cash: state.cash - totalCost,
+          };
+        });
+        get().updateNetWorth();
+      },
+
+      sellRealEstate: (realEstateSymbol: string, quantity: number) => {
+        set((state) => {
+          const realEstate = state.realEstates[realEstateSymbol];
+          if (!realEstate) return state;
+          
+          const asset = realEstateSymbol as Asset;
+          const currentPrincipal = state.investments[asset];
+          const currentProfits = state.investmentProfits[asset];
+          
+          // Calculate current properties owned (approximate based on average cost)
+          const totalValue = currentPrincipal + currentProfits;
+          if (totalValue <= 0) return state; // No properties to sell
+          
+          const saleValue = realEstate.currentPrice * quantity;
           if (saleValue > totalValue) return state; // Trying to sell more than owned
           
           // Calculate proportional withdrawal from principal and profits

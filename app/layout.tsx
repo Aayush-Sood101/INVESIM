@@ -21,7 +21,7 @@ export default function RootLayout({
         <body className="min-h-screen" suppressHydrationWarning>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <Navigation />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-3 py-3">
               {children}
             </main>
           </ThemeProvider>

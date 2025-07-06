@@ -7,14 +7,12 @@ import { formatCurrency } from "@/lib/utils";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { CashChangeNotification } from "@/components/ui/cash-change-notification";
 
-// Base return rates for investment options
+// Base return rates for investment options - Traditional investments only (4 cards)
 const baseInvestmentOptions: { name: string; asset: Asset; baseReturnRate: number }[] = [
   { name: "Savings", asset: "savings", baseReturnRate: 4 },
   { name: "Fixed Deposit", asset: "fixedDeposit", baseReturnRate: 6 },
   { name: "Nifty 50", asset: "nifty50", baseReturnRate: 10 },
   { name: "Gold", asset: "gold", baseReturnRate: 8 },
-  { name: "Real Estate", asset: "realestate", baseReturnRate: 12 },
-  { name: "Crypto", asset: "crypto", baseReturnRate: 20 },
 ];
 
 const baseGoldPrice = 5000; // Base price of gold per gram
@@ -30,6 +28,7 @@ export default function GamePlay() {
     investmentProfits,
     stocks,
     cryptos,
+    realEstates,
     events,
     isGameOver,
     monthlyNetIncome,
@@ -43,6 +42,8 @@ export default function GamePlay() {
     sellStock,
     buyCrypto,
     sellCrypto,
+    buyRealEstate,
+    sellRealEstate,
     updateNetWorth,
     handleEvent,
     setCurrentEvent,
@@ -55,6 +56,7 @@ export default function GamePlay() {
   const [amounts, setAmounts] = useState<{ [key in Asset]?: number }>({});
   const [stockQuantities, setStockQuantities] = useState<{ [key: string]: number }>({});
   const [cryptoQuantities, setCryptoQuantities] = useState<{ [key: string]: number }>({});
+  const [realEstateQuantities, setRealEstateQuantities] = useState<{ [key: string]: number }>({});
   const [goldQuantity, setGoldQuantity] = useState<number>(0);
   const [investmentOptions, setInvestmentOptions] = useState(baseInvestmentOptions);
   const [previousRates, setPreviousRates] = useState<{ [key in Asset]?: number }>({});
@@ -302,6 +304,56 @@ export default function GamePlay() {
     const crypto = cryptos[cryptoSymbol];
     if (!crypto || crypto.currentPrice === 0) return 0;
     return Math.floor(totalValue / crypto.currentPrice); // Approximate coins owned
+  };
+
+  // Real Estate trading handlers
+  const handleRealEstateBuy = (realEstateSymbol: string, quantity: number) => {
+    const realEstate = realEstates[realEstateSymbol];
+    if (!realEstate || quantity <= 0) {
+      alert("Invalid real estate property or quantity!");
+      return;
+    }
+    
+    const totalCost = realEstate.currentPrice * quantity;
+    if (totalCost > cash) {
+      alert("Insufficient cash to buy real estate!");
+      return;
+    }
+    
+    buyRealEstate(realEstateSymbol, quantity);
+    setRealEstateQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
+    alert(`Bought ${quantity} ${realEstate.name} for ₹${formatCurrency(totalCost)}`);
+  };
+
+  const handleRealEstateSell = (realEstateSymbol: string, quantity: number) => {
+    const realEstate = realEstates[realEstateSymbol];
+    if (!realEstate || quantity <= 0) {
+      alert("Invalid real estate property or quantity!");
+      return;
+    }
+    
+    const asset = realEstateSymbol as Asset;
+    const totalValue = getTotalValue(asset);
+    const currentProperties = Math.floor(totalValue / realEstate.currentPrice); // Approximate properties owned
+    
+    if (quantity > currentProperties) {
+      alert("You don't own enough properties!");
+      return;
+    }
+    
+    sellRealEstate(realEstateSymbol, quantity);
+    setRealEstateQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
+    
+    const saleValue = realEstate.currentPrice * quantity;
+    alert(`Sold ${quantity} ${realEstate.name} for ₹${formatCurrency(saleValue)}`);
+  };
+
+  const getOwnedProperties = (realEstateSymbol: string) => {
+    const asset = realEstateSymbol as Asset;
+    const totalValue = getTotalValue(asset);
+    const realEstate = realEstates[realEstateSymbol];
+    if (!realEstate || realEstate.currentPrice === 0) return 0;
+    return Math.floor(totalValue / realEstate.currentPrice); // Approximate properties owned
   };
 
   const handleSellInvestment = (asset: Asset, amount: number) => {
@@ -675,6 +727,84 @@ export default function GamePlay() {
               })}
             </div>
           </div>
+          
+          {/* Real Estate Market Section */}
+          <div className="mt-12">
+            <h2 className="text-2xl font-bebas mb-4 text-center">🏠 REAL ESTATE MARKET</h2>
+            <div className="grid grid-cols-4 gap-4">
+              {Object.entries(realEstates).map(([symbol, realEstate]) => {
+                const ownedProperties = getOwnedProperties(symbol);
+                const realEstateValue = getTotalValue(symbol as Asset);
+                const profitPercentage = getProfitPercentage(symbol as Asset);
+                
+                return (
+                  <motion.div
+                    key={symbol}
+                    className="bg-gradient-to-br from-green-100 to-emerald-100 p-4 rounded-lg shadow-lg border-4 border-green-800"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="text-center">
+                      <h3 className="text-lg font-bebas text-green-800">{realEstate.symbol}</h3>
+                      <p className="text-xs text-gray-700 mb-2">{realEstate.name}</p>
+                      
+                      <div className="space-y-1">
+                        <div className="text-xl font-bold text-green-800">
+                          ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
+                        </div>
+                        <div className={`text-sm font-semibold ${realEstate.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {realEstate.change24h >= 0 ? '🏗️' : '📉'} {realEstate.change24h.toFixed(2)}%
+                        </div>
+                        
+                        {ownedProperties > 0 && (
+                          <div className="text-xs text-green-700 mt-2">
+                            Owned: {ownedProperties} properties
+                            <div className="text-xs">
+                              Value: ₹{formatCurrency(realEstateValue)}
+                            </div>
+                            {profitPercentage !== 0 && (
+                              <div className={`text-xs ${profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-3 space-y-2">
+                        <input
+                          type="number"
+                          className="w-full p-1 border-2 border-green-800 rounded text-green-800 text-sm"
+                          placeholder="Qty"
+                          min="1"
+                          value={realEstateQuantities[symbol] || ""}
+                          onChange={(e) =>
+                            setRealEstateQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
+                          }
+                        />
+                        
+                        <div className="flex space-x-1">
+                          <button
+                            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-green-800"
+                            onClick={() => handleRealEstateBuy(symbol, realEstateQuantities[symbol] || 0)}
+                          >
+                            BUY
+                          </button>
+                          <button
+                            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
+                            onClick={() => handleRealEstateSell(symbol, realEstateQuantities[symbol] || 0)}
+                            disabled={ownedProperties === 0}
+                          >
+                            SELL
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Right Sidebar - Investments */}
@@ -803,6 +933,57 @@ export default function GamePlay() {
                         )}
                       </p>
                       <p className="font-semibold border-t border-purple-300 pt-1">
+                        Total Value: ₹{formatCurrency(totalValue)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Real Estate Holdings */}
+          <div className="mt-6">
+            <h3 className="text-xl font-bebas mb-3">Real Estate Holdings</h3>
+            <div className="space-y-3">
+              {Object.entries(realEstates).map(([symbol, realEstate]) => {
+                const principal = investments[symbol as Asset] || 0;
+                const profits = investmentProfits[symbol as Asset] || 0;
+                const totalValue = getTotalValue(symbol as Asset);
+                const profitPercentage = getProfitPercentage(symbol as Asset);
+                const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
+                const ownedProperties = getOwnedProperties(symbol);
+                
+                if (totalValue === 0) return null;
+                
+                return (
+                  <div key={symbol} className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-lg shadow-lg border-4 border-green-800">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-sm font-bebas text-green-800">{realEstate.symbol}</h4>
+                        <p className="text-xs text-green-600">{ownedProperties} properties</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-green-800">
+                          ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
+                        </div>
+                        <div className={`text-xs ${realEstate.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {realEstate.change24h >= 0 ? '🏗️' : '📉'} {realEstate.change24h.toFixed(2)}%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1 text-sm mt-2">
+                      <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
+                      <p className={profitColor}>
+                        Profits: ₹{formatCurrency(profits)} 
+                        {principal > 0 && (
+                          <span className="text-xs ml-1">
+                            ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                          </span>
+                        )}
+                      </p>
+                      <p className="font-semibold border-t border-green-300 pt-1">
                         Total Value: ₹{formatCurrency(totalValue)}
                       </p>
                     </div>
