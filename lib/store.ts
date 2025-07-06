@@ -228,9 +228,9 @@ const initialRealEstates: Record<string, Stock> = {
 const getInitialState = (difficulty: Difficulty) => {
   switch (difficulty) {
     case "easy":
-      return { salary: 720000, fixedExpenses: 300000, cash: 200000, passiveIncomeTarget: 480000, timeLimit: 20 }; // ₹60k/month salary, ₹25k/month expenses
+      return { salary: 720000, fixedExpenses: 300000, cash: 200000, passiveIncomeTarget: 480000, timeLimit: 10 }; // ₹60k/month salary, ₹25k/month expenses
     case "medium":
-      return { salary: 600000, fixedExpenses: 300000, cash: 150000, passiveIncomeTarget: 540000, timeLimit: 15 }; // ₹50k/month salary, ₹25k/month expenses  
+      return { salary: 600000, fixedExpenses: 300000, cash: 150000, passiveIncomeTarget: 540000, timeLimit: 10 }; // ₹50k/month salary, ₹25k/month expenses  
     case "hard":
       return { salary: 480000, fixedExpenses: 300000, cash: 100000, passiveIncomeTarget: 600000, timeLimit: 10 }; // ₹40k/month salary, ₹25k/month expenses
     default:
@@ -397,9 +397,9 @@ export const useGameStore = create<GameState>()(
         // Random event trigger - reduced frequency for expense events (max 1-2 per year)
         // Only trigger expense events if it's been at least 18-36 seconds (6-12 months) since last one
         if (elapsedTime > 60000) { // After 1 minute
-          const monthsElapsed = Math.floor(elapsedTime / 2500); // 2.5 seconds = 1 month
+          const monthsElapsed = Math.floor(elapsedTime / 5000); // 5 seconds = 1 month
           const lastExpenseMonth = state.events.length > 0 ? 
-            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 2500) : 0;
+            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 5000) : 0;
           
           // Only allow expense events if it's been at least 6 months since last expense
           const monthsSinceLastExpense = monthsElapsed - lastExpenseMonth;
@@ -435,9 +435,9 @@ export const useGameStore = create<GameState>()(
           }
         }
 
-        // Calculate how many months have passed (each 2.5 seconds = 1 month in game time)
-        // 600 seconds total ÷ 20 years = 30 seconds per year ÷ 12 months = 2.5 seconds per month
-        const monthsElapsed = Math.floor(elapsedTime / 2500); // 2.5 seconds = 1 month
+        // Calculate how many months have passed (each 5 seconds = 1 month in game time)
+        // 600 seconds total ÷ 10 years = 60 seconds per year ÷ 12 months = 5 seconds per month
+        const monthsElapsed = Math.floor(elapsedTime / 5000); // 5 seconds = 1 month
         
         // Update current date based on elapsed time
         const gameStartDate = new Date(state.startDate);
@@ -631,8 +631,9 @@ export const useGameStore = create<GameState>()(
             console.log(`Adjusted monthly net income: ₹${adjustedMonthlyNetIncome.toLocaleString()}`);
           } else {
             newCash += totalCashDividends + monthlyNetIncome;
-            console.log(`💰 Month ${monthsElapsed}: Salary: ₹${monthlySalary.toLocaleString()}, Expenses: ₹${monthlyExpenses.toLocaleString()}, Net: ₹${monthlyNetIncome.toLocaleString()}`);
-            console.log(`Monthly net income: ₹${monthlyNetIncome.toLocaleString()}`);
+            const currentYear = Math.floor(monthsElapsed / 12);
+            const currentMonth = (monthsElapsed % 12) + 1;
+            console.log(`💰 Year ${currentYear}, Month ${currentMonth}: Salary: ₹${monthlySalary.toLocaleString()}, Expenses: ₹${monthlyExpenses.toLocaleString()}, Net: ₹${monthlyNetIncome.toLocaleString()}`);
           }
           
           console.log(`Total cash change: ₹${(totalCashDividends + Math.max(monthlyNetIncome, monthlySalary - newExpenses / 12)).toLocaleString()}`);

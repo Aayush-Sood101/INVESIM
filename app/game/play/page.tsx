@@ -93,8 +93,9 @@ export default function GamePlay() {
     };
   }, []); // Keep empty dependency array
 
-  const progress = Math.min(1, (currentTime - startTime) / (10 * 100 * 1000));
-  const year = Math.floor(progress * 20);
+  const progress = Math.min(1, (currentTime - startTime) / (10 * 60 * 1000)); // 10 minutes total
+  const year = Math.floor(progress * 10); // 10 years total
+  const currentMonth = Math.floor((progress * 10 * 12) % 12); // Current month (0-11)
 
   useEffect(() => {
     if (year > currentYear) {
@@ -382,14 +383,20 @@ export default function GamePlay() {
         
         {/* Enhanced Year Progress Section */}
         <div className="relative z-10 w-full max-w-4xl">
-          {/* Year Display with Status */}
+          {/* Year Display with Status and Month */}
           <div className="flex justify-between items-center mb-3">
             <div className="text-2xl font-bebas text-white flex items-center">
               <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
                 Year {year}
               </span>
               <span className="text-gray-300 mx-2">/</span>
-              <span className="text-gray-300">20</span>
+              <span className="text-gray-300">10</span>
+              
+              {/* Current Month Display */}
+              <span className="ml-4 text-lg text-blue-300 font-mono">
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][currentMonth]}
+              </span>
+              
               {showEventModal && (
                 <span className="ml-3 text-yellow-400 animate-pulse flex items-center">
                   ⏸️ <span className="ml-1 text-sm">PAUSED</span>
@@ -399,7 +406,7 @@ export default function GamePlay() {
             
             {/* Time remaining */}
             <div className="text-sm font-mono text-gray-300">
-              {20 - year} years remaining
+              {10 - year} years remaining
             </div>
           </div>
           
@@ -407,9 +414,9 @@ export default function GamePlay() {
           <div className="relative">
             {/* Background track with gradient */}
             <div className="w-full bg-gradient-to-r from-gray-800 to-gray-700 rounded-full h-4 shadow-inner">
-              {/* Year markers */}
+              {/* Year markers for 10 years */}
               <div className="absolute inset-0 flex justify-between items-center px-1">
-                {Array.from({ length: 21 }, (_, i) => i * 5).map((yearMark) => (
+                {Array.from({ length: 11 }, (_, i) => i * 2).map((yearMark) => (
                   <div
                     key={yearMark}
                     className="w-0.5 h-3 bg-gray-500 opacity-60"
@@ -457,27 +464,31 @@ export default function GamePlay() {
               </div>
             </div>
             
-            {/* Year labels with milestones */}
+            {/* Year labels with milestones for 10 years */}
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <div className="flex flex-col items-center">
                 <span>Year 0</span>
                 <span className="text-blue-400">🚀 Start</span>
               </div>
               <div className="flex flex-col items-center">
-                <span>Year 5</span>
-                {year >= 5 && <span className="text-yellow-400">🎯 Quarter</span>}
+                <span>Year 2</span>
+                {year >= 2 && <span className="text-yellow-400">📈 Early</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 4</span>
+                {year >= 4 && <span className="text-orange-400">💪 Growth</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 6</span>
+                {year >= 6 && <span className="text-purple-400">⚡ Advanced</span>}
+              </div>
+              <div className="flex flex-col items-center">
+                <span>Year 8</span>
+                {year >= 8 && <span className="text-red-400">🏃 Sprint</span>}
               </div>
               <div className="flex flex-col items-center">
                 <span>Year 10</span>
-                {year >= 10 && <span className="text-orange-400">⚡ Halfway</span>}
-              </div>
-              <div className="flex flex-col items-center">
-                <span>Year 15</span>
-                {year >= 15 && <span className="text-purple-400">🏃 Sprint</span>}
-              </div>
-              <div className="flex flex-col items-center">
-                <span>Year 20</span>
-                {year >= 20 && <span className="text-green-400">🏁 Finish</span>}
+                {year >= 10 && <span className="text-green-400">🏁 Finish</span>}
               </div>
             </div>
           </div>
@@ -487,7 +498,7 @@ export default function GamePlay() {
             <div className="text-gray-300 flex items-center">
               <span className="font-semibold">{Math.round(progress * 100)}%</span> 
               <span className="ml-1">Complete</span>
-              {year >= 5 && (
+              {year >= 2 && (
                 <span className={`ml-3 px-2 py-1 rounded-full text-xs font-bold transition-all duration-500 ${
                   netWorth > aiNetWorth * 1.5
                     ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black animate-bounce' // Dominating
@@ -527,7 +538,28 @@ export default function GamePlay() {
         {/* Left Sidebar - Game Info */}
         <div className="bg-yellow-300 p-6 border-r-4 border-black">
           <div className="space-y-6">
-            <div className="text-2xl font-bebas">Year {year} of 20</div>
+            <div>
+              <div className="text-2xl font-bebas">Year {year} of 10</div>
+              <div className="text-lg font-mono text-gray-700">
+                {['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'][currentMonth]}
+              </div>
+              
+              {/* Month Progress Bar */}
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                  <span>Jan</span>
+                  <span>Jun</span>
+                  <span>Dec</span>
+                </div>
+                <div className="w-full bg-gray-400 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${(currentMonth / 11) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-2 relative">
               <h2 className="font-bebas">POCKET CASH</h2>
