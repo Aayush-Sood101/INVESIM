@@ -35,6 +35,9 @@ export type GameState = {
   stocks: Record<string, Stock>; // Stock market data
   cryptos: Record<string, Stock>; // Crypto market data
   realEstates: Record<string, Stock>; // Real estate market data
+  stockQuantities: Record<string, number>; // Actual stock quantities owned
+  cryptoQuantities: Record<string, number>; // Actual crypto quantities owned
+  realEstateQuantities: Record<string, number>; // Actual real estate quantities owned
   events: GameEvent[];
   currentEvent: GameEvent | null; // Current event being displayed
   showEventModal: boolean; // Whether to show event modal
@@ -289,6 +292,9 @@ export const useGameStore = create<GameState>()(
       stocks: initialStocks,
       cryptos: initialCryptos,
       realEstates: initialRealEstates,
+      stockQuantities: { reliance: 0, tcs: 0, hdfc: 0, infosys: 0 },
+      cryptoQuantities: { bitcoin: 0, ethereum: 0, cardano: 0, polygon: 0 },
+      realEstateQuantities: { mumbai: 0, bangalore: 0, delhi: 0, pune: 0 },
       events: [],
       currentEvent: null,
       showEventModal: false,
@@ -478,30 +484,30 @@ export const useGameStore = create<GameState>()(
           const updatedInvestmentReturns = { ...investmentReturns };
           Object.entries(updatedStocks).forEach(([assetKey, stock]) => {
             if (assetKey in updatedInvestmentReturns) {
-              // Calculate return based on price movement from base price
-              const priceGrowthRate = (stock.currentPrice - stock.basePrice) / stock.basePrice;
-              // Convert to annualized return (monthly growth * 12)
-              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+              // Calculate return based on monthly price change, not base price
+              const monthlyChange = (stock.currentPrice - state.stocks[assetKey].currentPrice) / state.stocks[assetKey].currentPrice;
+              // Convert to annualized return (monthly change * 12)
+              updatedInvestmentReturns[assetKey as Asset] = monthlyChange * 12;
             }
           });
           
           // Update crypto-based investment returns based on current prices
           Object.entries(updatedCryptos).forEach(([assetKey, crypto]) => {
             if (assetKey in updatedInvestmentReturns) {
-              // Calculate return based on price movement from base price
-              const priceGrowthRate = (crypto.currentPrice - crypto.basePrice) / crypto.basePrice;
-              // Convert to annualized return (monthly growth * 12)
-              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+              // Calculate return based on monthly price change, not base price
+              const monthlyChange = (crypto.currentPrice - state.cryptos[assetKey].currentPrice) / state.cryptos[assetKey].currentPrice;
+              // Convert to annualized return (monthly change * 12)
+              updatedInvestmentReturns[assetKey as Asset] = monthlyChange * 12;
             }
           });
           
           // Update real estate-based investment returns based on current prices
           Object.entries(updatedRealEstates).forEach(([assetKey, realEstate]) => {
             if (assetKey in updatedInvestmentReturns) {
-              // Calculate return based on price movement from base price
-              const priceGrowthRate = (realEstate.currentPrice - realEstate.basePrice) / realEstate.basePrice;
-              // Convert to annualized return (monthly growth * 12)
-              updatedInvestmentReturns[assetKey as Asset] = priceGrowthRate * 12;
+              // Calculate return based on monthly price change, not base price
+              const monthlyChange = (realEstate.currentPrice - state.realEstates[assetKey].currentPrice) / state.realEstates[assetKey].currentPrice;
+              // Convert to annualized return (monthly change * 12)
+              updatedInvestmentReturns[assetKey as Asset] = monthlyChange * 12;
             }
           });
           
@@ -534,7 +540,15 @@ export const useGameStore = create<GameState>()(
               const currentProfits = state.investmentProfits[asset as Asset];
               const totalInvestedValue = principalAmount + currentProfits; // Principal + profits
               
-              const monthlyReturnRate = investmentReturns[asset as Asset] / 12;
+              let monthlyReturnRate = updatedInvestmentReturns[asset as Asset] / 12;
+              
+              // Add volatility to traditional investments - they can have losses too!
+              if (['savings', 'fixedDeposit', 'nifty50', 'gold'].includes(asset)) {
+                // Add random variation: ±50% of the base return rate
+                const volatilityFactor = (Math.random() - 0.5) * 2 * 0.5; // ±50%
+                monthlyReturnRate = monthlyReturnRate * (1 + volatilityFactor);
+              }
+              
               const totalMonthlyReturn = totalInvestedValue * monthlyReturnRate;
               
               // 70% gets added to profits (compound growth), 30% paid as cash dividend
@@ -784,6 +798,10 @@ export const useGameStore = create<GameState>()(
               ...state.investments, 
               [asset]: state.investments[asset] + totalCost 
             },
+            stockQuantities: {
+              ...state.stockQuantities,
+              [stockSymbol]: (state.stockQuantities[stockSymbol] || 0) + quantity
+            },
             cash: state.cash - totalCost,
           };
         });
@@ -795,33 +813,34 @@ export const useGameStore = create<GameState>()(
           const stock = state.stocks[stockSymbol];
           if (!stock) return state;
           
+          const currentQuantity = state.stockQuantities[stockSymbol] || 0;
+          if (quantity > currentQuantity) return state; // Don't have enough shares
+          
           const asset = stockSymbol as Asset;
-          const currentPrincipal = state.investments[asset];
-          const currentProfits = state.investmentProfits[asset];
-          
-          // Calculate current shares owned (approximate based on average cost)
-          const totalValue = currentPrincipal + currentProfits;
-          if (totalValue <= 0) return state; // No shares to sell
-          
           const saleValue = stock.currentPrice * quantity;
-          if (saleValue > totalValue) return state; // Trying to sell more than owned
           
-          // Calculate proportional withdrawal from principal and profits
-          const principalRatio = currentPrincipal / totalValue;
-          const profitRatio = currentProfits / totalValue;
+          // Calculate average cost per share
+          const totalInvestment = state.investments[asset] || 0;
+          const totalShares = currentQuantity;
+          const avgCostPerShare = totalShares > 0 ? totalInvestment / totalShares : 0;
           
-          const principalWithdrawal = saleValue * principalRatio;
-          const profitWithdrawal = saleValue * profitRatio;
+          // Calculate principal and profit portions
+          const principalWithdrawal = avgCostPerShare * quantity;
+          const profitFromSale = saleValue - principalWithdrawal;
           
           return {
             ...state,
             investments: { 
               ...state.investments, 
-              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+              [asset]: Math.max(0, totalInvestment - principalWithdrawal) 
             },
             investmentProfits: { 
               ...state.investmentProfits, 
-              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+              [asset]: (state.investmentProfits[asset] || 0) + profitFromSale
+            },
+            stockQuantities: {
+              ...state.stockQuantities,
+              [stockSymbol]: currentQuantity - quantity
             },
             cash: state.cash + saleValue,
           };
@@ -845,6 +864,10 @@ export const useGameStore = create<GameState>()(
               ...state.investments, 
               [asset]: state.investments[asset] + totalCost 
             },
+            cryptoQuantities: {
+              ...state.cryptoQuantities,
+              [cryptoSymbol]: (state.cryptoQuantities[cryptoSymbol] || 0) + quantity
+            },
             cash: state.cash - totalCost,
           };
         });
@@ -856,33 +879,34 @@ export const useGameStore = create<GameState>()(
           const crypto = state.cryptos[cryptoSymbol];
           if (!crypto) return state;
           
+          const currentQuantity = state.cryptoQuantities[cryptoSymbol] || 0;
+          if (quantity > currentQuantity) return state; // Don't have enough coins
+          
           const asset = cryptoSymbol as Asset;
-          const currentPrincipal = state.investments[asset];
-          const currentProfits = state.investmentProfits[asset];
-          
-          // Calculate current coins owned (approximate based on average cost)
-          const totalValue = currentPrincipal + currentProfits;
-          if (totalValue <= 0) return state; // No coins to sell
-          
           const saleValue = crypto.currentPrice * quantity;
-          if (saleValue > totalValue) return state; // Trying to sell more than owned
           
-          // Calculate proportional withdrawal from principal and profits
-          const principalRatio = currentPrincipal / totalValue;
-          const profitRatio = currentProfits / totalValue;
+          // Calculate average cost per coin
+          const totalInvestment = state.investments[asset] || 0;
+          const totalCoins = currentQuantity;
+          const avgCostPerCoin = totalCoins > 0 ? totalInvestment / totalCoins : 0;
           
-          const principalWithdrawal = saleValue * principalRatio;
-          const profitWithdrawal = saleValue * profitRatio;
+          // Calculate principal and profit portions
+          const principalWithdrawal = avgCostPerCoin * quantity;
+          const profitFromSale = saleValue - principalWithdrawal;
           
           return {
             ...state,
             investments: { 
               ...state.investments, 
-              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+              [asset]: Math.max(0, totalInvestment - principalWithdrawal) 
             },
             investmentProfits: { 
               ...state.investmentProfits, 
-              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+              [asset]: (state.investmentProfits[asset] || 0) + profitFromSale
+            },
+            cryptoQuantities: {
+              ...state.cryptoQuantities,
+              [cryptoSymbol]: currentQuantity - quantity
             },
             cash: state.cash + saleValue,
           };
@@ -907,6 +931,10 @@ export const useGameStore = create<GameState>()(
               ...state.investments, 
               [asset]: (state.investments[asset] || 0) + totalCost 
             },
+            realEstateQuantities: {
+              ...state.realEstateQuantities,
+              [realEstateSymbol]: (state.realEstateQuantities[realEstateSymbol] || 0) + quantity
+            },
             cash: state.cash - totalCost,
           };
         });
@@ -918,33 +946,34 @@ export const useGameStore = create<GameState>()(
           const realEstate = state.realEstates[realEstateSymbol];
           if (!realEstate) return state;
           
+          const currentQuantity = state.realEstateQuantities[realEstateSymbol] || 0;
+          if (quantity > currentQuantity) return state; // Don't have enough properties
+          
           const asset = realEstateSymbol as Asset;
-          const currentPrincipal = state.investments[asset];
-          const currentProfits = state.investmentProfits[asset];
-          
-          // Calculate current properties owned (approximate based on average cost)
-          const totalValue = currentPrincipal + currentProfits;
-          if (totalValue <= 0) return state; // No properties to sell
-          
           const saleValue = realEstate.currentPrice * quantity;
-          if (saleValue > totalValue) return state; // Trying to sell more than owned
           
-          // Calculate proportional withdrawal from principal and profits
-          const principalRatio = currentPrincipal / totalValue;
-          const profitRatio = currentProfits / totalValue;
+          // Calculate average cost per property
+          const totalInvestment = state.investments[asset] || 0;
+          const totalProperties = currentQuantity;
+          const avgCostPerProperty = totalProperties > 0 ? totalInvestment / totalProperties : 0;
           
-          const principalWithdrawal = saleValue * principalRatio;
-          const profitWithdrawal = saleValue * profitRatio;
+          // Calculate principal and profit portions
+          const principalWithdrawal = avgCostPerProperty * quantity;
+          const profitFromSale = saleValue - principalWithdrawal;
           
           return {
             ...state,
             investments: { 
               ...state.investments, 
-              [asset]: Math.max(0, currentPrincipal - principalWithdrawal) 
+              [asset]: Math.max(0, totalInvestment - principalWithdrawal) 
             },
             investmentProfits: { 
               ...state.investmentProfits, 
-              [asset]: Math.max(0, currentProfits - profitWithdrawal) 
+              [asset]: (state.investmentProfits[asset] || 0) + profitFromSale
+            },
+            realEstateQuantities: {
+              ...state.realEstateQuantities,
+              [realEstateSymbol]: currentQuantity - quantity
             },
             cash: state.cash + saleValue,
           };

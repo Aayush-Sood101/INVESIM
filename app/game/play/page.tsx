@@ -29,6 +29,9 @@ export default function GamePlay() {
     stocks,
     cryptos,
     realEstates,
+    stockQuantities,
+    cryptoQuantities,
+    realEstateQuantities,
     events,
     isGameOver,
     monthlyNetIncome,
@@ -54,9 +57,9 @@ export default function GamePlay() {
 
   const animationFrameRef = useRef<number>();
   const [amounts, setAmounts] = useState<{ [key in Asset]?: number }>({});
-  const [stockQuantities, setStockQuantities] = useState<{ [key: string]: number }>({});
-  const [cryptoQuantities, setCryptoQuantities] = useState<{ [key: string]: number }>({});
-  const [realEstateQuantities, setRealEstateQuantities] = useState<{ [key: string]: number }>({});
+  const [stockBuyQuantities, setStockBuyQuantities] = useState<{ [key: string]: number }>({});
+  const [cryptoBuyQuantities, setCryptoBuyQuantities] = useState<{ [key: string]: number }>({});
+  const [realEstateBuyQuantities, setRealEstateBuyQuantities] = useState<{ [key: string]: number }>({});
   const [goldQuantity, setGoldQuantity] = useState<number>(0);
   const [investmentOptions, setInvestmentOptions] = useState(baseInvestmentOptions);
   const [previousRates, setPreviousRates] = useState<{ [key in Asset]?: number }>({});
@@ -221,7 +224,7 @@ export default function GamePlay() {
     }
     
     buyStock(stockSymbol, quantity);
-    setStockQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
+    setStockBuyQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
     alert(`Bought ${quantity} shares of ${stock.name} for ₹${formatCurrency(totalCost)}`);
   };
 
@@ -242,18 +245,14 @@ export default function GamePlay() {
     }
     
     sellStock(stockSymbol, quantity);
-    setStockQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
+    setStockBuyQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
     
     const saleValue = stock.currentPrice * quantity;
     alert(`Sold ${quantity} shares of ${stock.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedShares = (stockSymbol: string) => {
-    const asset = stockSymbol as Asset;
-    const totalValue = getTotalValue(asset);
-    const stock = stocks[stockSymbol];
-    if (!stock || stock.currentPrice === 0) return 0;
-    return Math.floor(totalValue / stock.currentPrice); // Approximate shares owned
+    return stockQuantities[stockSymbol] || 0;
   };
 
   // Crypto trading handlers
@@ -271,7 +270,7 @@ export default function GamePlay() {
     }
     
     buyCrypto(cryptoSymbol, quantity);
-    setCryptoQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
+    setCryptoBuyQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
     alert(`Bought ${quantity} ${crypto.name} for ₹${formatCurrency(totalCost)}`);
   };
 
@@ -292,18 +291,14 @@ export default function GamePlay() {
     }
     
     sellCrypto(cryptoSymbol, quantity);
-    setCryptoQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
+    setCryptoBuyQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
     
     const saleValue = crypto.currentPrice * quantity;
     alert(`Sold ${quantity} ${crypto.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedCoins = (cryptoSymbol: string) => {
-    const asset = cryptoSymbol as Asset;
-    const totalValue = getTotalValue(asset);
-    const crypto = cryptos[cryptoSymbol];
-    if (!crypto || crypto.currentPrice === 0) return 0;
-    return Math.floor(totalValue / crypto.currentPrice); // Approximate coins owned
+    return cryptoQuantities[cryptoSymbol] || 0;
   };
 
   // Real Estate trading handlers
@@ -321,7 +316,7 @@ export default function GamePlay() {
     }
     
     buyRealEstate(realEstateSymbol, quantity);
-    setRealEstateQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
+    setRealEstateBuyQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
     alert(`Bought ${quantity} ${realEstate.name} for ₹${formatCurrency(totalCost)}`);
   };
 
@@ -342,18 +337,14 @@ export default function GamePlay() {
     }
     
     sellRealEstate(realEstateSymbol, quantity);
-    setRealEstateQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
+    setRealEstateBuyQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
     
     const saleValue = realEstate.currentPrice * quantity;
     alert(`Sold ${quantity} ${realEstate.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedProperties = (realEstateSymbol: string) => {
-    const asset = realEstateSymbol as Asset;
-    const totalValue = getTotalValue(asset);
-    const realEstate = realEstates[realEstateSymbol];
-    if (!realEstate || realEstate.currentPrice === 0) return 0;
-    return Math.floor(totalValue / realEstate.currentPrice); // Approximate properties owned
+    return realEstateQuantities[realEstateSymbol] || 0;
   };
 
   const handleSellInvestment = (asset: Asset, amount: number) => {
@@ -620,22 +611,22 @@ export default function GamePlay() {
                           className="w-full p-1 border-2 border-black rounded text-black text-sm"
                           placeholder="Qty"
                           min="1"
-                          value={stockQuantities[symbol] || ""}
+                          value={stockBuyQuantities[symbol] || ""}
                           onChange={(e) =>
-                            setStockQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
+                            setStockBuyQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
                           }
                         />
                         
                         <div className="flex space-x-1">
                           <button
                             className="flex-1 bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                            onClick={() => handleStockBuy(symbol, stockQuantities[symbol] || 0)}
+                            onClick={() => handleStockBuy(symbol, stockBuyQuantities[symbol] || 0)}
                           >
                             BUY
                           </button>
                           <button
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                            onClick={() => handleStockSell(symbol, stockQuantities[symbol] || 0)}
+                            onClick={() => handleStockSell(symbol, stockBuyQuantities[symbol] || 0)}
                             disabled={ownedShares === 0}
                           >
                             SELL
@@ -699,22 +690,22 @@ export default function GamePlay() {
                           placeholder="Qty"
                           min="0.1"
                           step="0.1"
-                          value={cryptoQuantities[symbol] || ""}
+                          value={cryptoBuyQuantities[symbol] || ""}
                           onChange={(e) =>
-                            setCryptoQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
+                            setCryptoBuyQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
                           }
                         />
                         
                         <div className="flex space-x-1">
                           <button
                             className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-green-800"
-                            onClick={() => handleCryptoBuy(symbol, cryptoQuantities[symbol] || 0)}
+                            onClick={() => handleCryptoBuy(symbol, cryptoBuyQuantities[symbol] || 0)}
                           >
                             BUY
                           </button>
                           <button
                             className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
-                            onClick={() => handleCryptoSell(symbol, cryptoQuantities[symbol] || 0)}
+                            onClick={() => handleCryptoSell(symbol, cryptoBuyQuantities[symbol] || 0)}
                             disabled={ownedCoins === 0}
                           >
                             SELL
@@ -777,22 +768,22 @@ export default function GamePlay() {
                           className="w-full p-1 border-2 border-green-800 rounded text-green-800 text-sm"
                           placeholder="Qty"
                           min="1"
-                          value={realEstateQuantities[symbol] || ""}
+                          value={realEstateBuyQuantities[symbol] || ""}
                           onChange={(e) =>
-                            setRealEstateQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
+                            setRealEstateBuyQuantities((prev) => ({ ...prev, [symbol]: Number(e.target.value) }))
                           }
                         />
                         
                         <div className="flex space-x-1">
                           <button
                             className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-green-800"
-                            onClick={() => handleRealEstateBuy(symbol, realEstateQuantities[symbol] || 0)}
+                            onClick={() => handleRealEstateBuy(symbol, realEstateBuyQuantities[symbol] || 0)}
                           >
                             BUY
                           </button>
                           <button
                             className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
-                            onClick={() => handleRealEstateSell(symbol, realEstateQuantities[symbol] || 0)}
+                            onClick={() => handleRealEstateSell(symbol, realEstateBuyQuantities[symbol] || 0)}
                             disabled={ownedProperties === 0}
                           >
                             SELL
