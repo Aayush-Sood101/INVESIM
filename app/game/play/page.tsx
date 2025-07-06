@@ -53,6 +53,8 @@ export default function GamePlay() {
     setShowEventModal,
     payExpenseWithCash,
     payExpenseWithInvestments,
+    gameTime,
+    setPaused,
   } = useGameStore();
 
   const animationFrameRef = useRef<number>();
@@ -60,6 +62,8 @@ export default function GamePlay() {
   const [stockBuyQuantities, setStockBuyQuantities] = useState<{ [key: string]: number }>({});
   const [cryptoBuyQuantities, setCryptoBuyQuantities] = useState<{ [key: string]: number }>({});
   const [realEstateBuyQuantities, setRealEstateBuyQuantities] = useState<{ [key: string]: number }>({});
+  const [customSellAmounts, setCustomSellAmounts] = useState<{ [key: string]: number }>({});
+  const [showCustomAmountFor, setShowCustomAmountFor] = useState<string | null>(null);
   const [goldQuantity, setGoldQuantity] = useState<number>(0);
   const [investmentOptions, setInvestmentOptions] = useState(baseInvestmentOptions);
   const [previousRates, setPreviousRates] = useState<{ [key in Asset]?: number }>({});
@@ -74,13 +78,10 @@ export default function GamePlay() {
     initializeGame();
     setGameStarted(true); // Trigger the starting animation
 
+    let logCounter = 0;
     function gameLoop() {
-      // Get the current state to check if modal is showing
-      const currentState = useGameStore.getState();
-      // Only advance time if no expense modal is showing
-      if (!currentState.showEventModal) {
-        advanceTime();
-      }
+      // Always call advanceTime - it will handle pause logic internally
+      advanceTime();
       animationFrameRef.current = requestAnimationFrame(gameLoop);
     }
 
@@ -93,9 +94,14 @@ export default function GamePlay() {
     };
   }, []); // Keep empty dependency array
 
-  const progress = Math.min(1, (currentTime - startTime) / (10 * 60 * 1000)); // 10 minutes total
+  const progress = Math.min(1, gameTime / (10 * 60 * 1000)); // 10 minutes total
   const year = Math.floor(progress * 10); // 10 years total
   const currentMonth = Math.floor((progress * 10 * 12) % 12); // Current month (0-11)
+  
+  // Debug logging for time tracking
+  useEffect(() => {
+    console.log(`🕐 UI Update - GameTime: ${Math.floor(gameTime/1000)}s, Year: ${year}, Month: ${currentMonth}, Modal: ${showEventModal}`);
+  }, [gameTime, year, currentMonth, showEventModal]);
 
   useEffect(() => {
     if (year > currentYear) {
@@ -114,12 +120,19 @@ export default function GamePlay() {
     setPreviousCash(cash);
   }, [cash, previousCash]);
 
-  // Reset investment selector when modal closes
+  // Reset investment selector when modal closes and handle pause state
   useEffect(() => {
+    setPaused(showEventModal);
+    if (showEventModal) {
+      console.log(`🛑 Game PAUSED - Modal opened`);
+    } else {
+      console.log(`▶️ Game RESUMED - Modal closed`);
+    }
+    
     if (!showEventModal) {
       setShowInvestmentSelector(false);
     }
-  }, [showEventModal]);
+  }, [showEventModal, setPaused]);
 
   const goldReturnRate = investmentOptions.find((option) => option.asset === "gold")?.baseReturnRate || 0;
   const currentGoldRate = baseGoldPrice * Math.pow(1 + goldReturnRate / 100, year);
@@ -993,50 +1006,65 @@ export default function GamePlay() {
           <div className="mt-6">
             <h3 className="text-xl font-bebas mb-3">Stock Holdings</h3>
             <div className="space-y-3">
-              {Object.entries(stocks).map(([symbol, stock]) => {
-                const principal = investments[symbol as Asset] || 0;
-                const profits = investmentProfits[symbol as Asset] || 0;
-                const totalValue = getTotalValue(symbol as Asset);
-                const profitPercentage = getProfitPercentage(symbol as Asset);
-                const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
-                const ownedShares = getOwnedShares(symbol);
+              {(() => {
+                const ownedStocks = Object.entries(stocks).filter(([symbol, stock]) => {
+                  const totalValue = getTotalValue(symbol as Asset);
+                  return totalValue > 0;
+                });
                 
-                if (totalValue === 0) return null;
+                if (ownedStocks.length === 0) {
+                  return (
+                    <div className="bg-gray-100 p-4 rounded-lg shadow-lg border-4 border-gray-400 text-center">
+                      <div className="text-gray-500 mb-2 text-2xl">📈</div>
+                      <h4 className="text-sm font-bebas text-gray-600 mb-1">No Stock Investments</h4>
+                      <p className="text-xs text-gray-500">Start investing in stocks to see your holdings here!</p>
+                    </div>
+                  );
+                }
                 
-                return (
-                  <div key={symbol} className="bg-white p-3 rounded-lg shadow-lg border-4 border-black">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-sm font-bebas">{stock.symbol}</h4>
-                        <p className="text-xs text-gray-600">{ownedShares} shares</p>
+                return ownedStocks.map(([symbol, stock]) => {
+                  const principal = investments[symbol as Asset] || 0;
+                  const profits = investmentProfits[symbol as Asset] || 0;
+                  const totalValue = getTotalValue(symbol as Asset);
+                  const profitPercentage = getProfitPercentage(symbol as Asset);
+                  const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
+                  const ownedShares = getOwnedShares(symbol);
+                
+                  return (
+                    <div key={symbol} className="bg-white p-3 rounded-lg shadow-lg border-4 border-black">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-bebas">{stock.symbol}</h4>
+                          <p className="text-xs text-gray-600">{ownedShares} shares</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">
+                            ₹{stock.currentPrice.toFixed(2)}
+                          </div>
+                          <div className={`text-xs ${stock.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {stock.change24h >= 0 ? '↗' : '↘'} {stock.change24h.toFixed(2)}%
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold">
-                          ₹{stock.currentPrice.toFixed(2)}
-                        </div>
-                        <div className={`text-xs ${stock.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {stock.change24h >= 0 ? '↗' : '↘'} {stock.change24h.toFixed(2)}%
-                        </div>
+                      
+                      <div className="space-y-1 text-sm mt-2">
+                        <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
+                        <p className={profitColor}>
+                          Profits: ₹{formatCurrency(profits)} 
+                          {principal > 0 && (
+                            <span className="text-xs ml-1">
+                              ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                            </span>
+                          )}
+                        </p>
+                        <p className="font-semibold border-t border-gray-300 pt-1">
+                          Total Value: ₹{formatCurrency(totalValue)}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1 text-sm mt-2">
-                      <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
-                      <p className={profitColor}>
-                        Profits: ₹{formatCurrency(profits)} 
-                        {principal > 0 && (
-                          <span className="text-xs ml-1">
-                            ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                          </span>
-                        )}
-                      </p>
-                      <p className="font-semibold border-t border-gray-300 pt-1">
-                        Total Value: ₹{formatCurrency(totalValue)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
           
@@ -1044,50 +1072,65 @@ export default function GamePlay() {
           <div className="mt-6">
             <h3 className="text-xl font-bebas mb-3">Crypto Holdings</h3>
             <div className="space-y-3">
-              {Object.entries(cryptos).map(([symbol, crypto]) => {
-                const principal = investments[symbol as Asset] || 0;
-                const profits = investmentProfits[symbol as Asset] || 0;
-                const totalValue = getTotalValue(symbol as Asset);
-                const profitPercentage = getProfitPercentage(symbol as Asset);
-                const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
-                const ownedCoins = getOwnedCoins(symbol);
+              {(() => {
+                const ownedCryptos = Object.entries(cryptos).filter(([symbol, crypto]) => {
+                  const totalValue = getTotalValue(symbol as Asset);
+                  return totalValue > 0;
+                });
                 
-                if (totalValue === 0) return null;
+                if (ownedCryptos.length === 0) {
+                  return (
+                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-4 rounded-lg shadow-lg border-4 border-purple-400 text-center">
+                      <div className="text-purple-500 mb-2 text-2xl">₿</div>
+                      <h4 className="text-sm font-bebas text-purple-600 mb-1">No Crypto Investments</h4>
+                      <p className="text-xs text-purple-500">Start investing in cryptocurrency to see your holdings here!</p>
+                    </div>
+                  );
+                }
                 
-                return (
-                  <div key={symbol} className="bg-gradient-to-br from-purple-50 to-blue-50 p-3 rounded-lg shadow-lg border-4 border-purple-800">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-sm font-bebas text-purple-800">{crypto.symbol}</h4>
-                        <p className="text-xs text-purple-600">{ownedCoins} coins</p>
+                return ownedCryptos.map(([symbol, crypto]) => {
+                  const principal = investments[symbol as Asset] || 0;
+                  const profits = investmentProfits[symbol as Asset] || 0;
+                  const totalValue = getTotalValue(symbol as Asset);
+                  const profitPercentage = getProfitPercentage(symbol as Asset);
+                  const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
+                  const ownedCoins = getOwnedCoins(symbol);
+                
+                  return (
+                    <div key={symbol} className="bg-gradient-to-br from-purple-50 to-blue-50 p-3 rounded-lg shadow-lg border-4 border-purple-800">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-bebas text-purple-800">{crypto.symbol}</h4>
+                          <p className="text-xs text-purple-600">{ownedCoins} coins</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-purple-800">
+                            ₹{crypto.currentPrice.toFixed(2)}
+                          </div>
+                          <div className={`text-xs ${crypto.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {crypto.change24h >= 0 ? '🚀' : '📉'} {crypto.change24h.toFixed(2)}%
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-purple-800">
-                          ₹{crypto.currentPrice.toFixed(2)}
-                        </div>
-                        <div className={`text-xs ${crypto.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {crypto.change24h >= 0 ? '🚀' : '📉'} {crypto.change24h.toFixed(2)}%
-                        </div>
+                      
+                      <div className="space-y-1 text-sm mt-2">
+                        <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
+                        <p className={profitColor}>
+                          Profits: ₹{formatCurrency(profits)} 
+                          {principal > 0 && (
+                            <span className="text-xs ml-1">
+                              ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                            </span>
+                          )}
+                        </p>
+                        <p className="font-semibold border-t border-purple-300 pt-1">
+                          Total Value: ₹{formatCurrency(totalValue)}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1 text-sm mt-2">
-                      <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
-                      <p className={profitColor}>
-                        Profits: ₹{formatCurrency(profits)} 
-                        {principal > 0 && (
-                          <span className="text-xs ml-1">
-                            ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                          </span>
-                        )}
-                      </p>
-                      <p className="font-semibold border-t border-purple-300 pt-1">
-                        Total Value: ₹{formatCurrency(totalValue)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
           
@@ -1095,56 +1138,71 @@ export default function GamePlay() {
           <div className="mt-6">
             <h3 className="text-xl font-bebas mb-3">Real Estate Holdings</h3>
             <div className="space-y-3">
-              {Object.entries(realEstates).map(([symbol, realEstate]) => {
-                const principal = investments[symbol as Asset] || 0;
-                const profits = investmentProfits[symbol as Asset] || 0;
-                const totalValue = getTotalValue(symbol as Asset);
-                const profitPercentage = getProfitPercentage(symbol as Asset);
-                const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
-                const ownedProperties = getOwnedProperties(symbol);
+              {(() => {
+                const ownedRealEstates = Object.entries(realEstates).filter(([symbol, realEstate]) => {
+                  const totalValue = getTotalValue(symbol as Asset);
+                  return totalValue > 0;
+                });
                 
-                if (totalValue === 0) return null;
+                if (ownedRealEstates.length === 0) {
+                  return (
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg shadow-lg border-4 border-green-400 text-center">
+                      <div className="text-green-500 mb-2 text-2xl">🏠</div>
+                      <h4 className="text-sm font-bebas text-green-600 mb-1">No Real Estate Investments</h4>
+                      <p className="text-xs text-green-500">Start investing in real estate to see your holdings here!</p>
+                    </div>
+                  );
+                }
                 
-                return (
-                  <div key={symbol} className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-lg shadow-lg border-4 border-green-800">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-sm font-bebas text-green-800">{realEstate.symbol}</h4>
-                        <p className="text-xs text-green-600">{ownedProperties} properties</p>
+                return ownedRealEstates.map(([symbol, realEstate]) => {
+                  const principal = investments[symbol as Asset] || 0;
+                  const profits = investmentProfits[symbol as Asset] || 0;
+                  const totalValue = getTotalValue(symbol as Asset);
+                  const profitPercentage = getProfitPercentage(symbol as Asset);
+                  const profitColor = profits >= 0 ? "text-green-600" : "text-red-600";
+                  const ownedProperties = getOwnedProperties(symbol);
+                
+                  return (
+                    <div key={symbol} className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 rounded-lg shadow-lg border-4 border-green-800">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="text-sm font-bebas text-green-800">{realEstate.symbol}</h4>
+                          <p className="text-xs text-green-600">{ownedProperties} properties</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-800">
+                            ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
+                          </div>
+                          <div className={`text-xs ${realEstate.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {realEstate.change24h >= 0 ? '🏗️' : '📉'} {realEstate.change24h.toFixed(2)}%
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-800">
-                          ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
-                        </div>
-                        <div className={`text-xs ${realEstate.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {realEstate.change24h >= 0 ? '🏗️' : '📉'} {realEstate.change24h.toFixed(2)}%
-                        </div>
+                      
+                      <div className="space-y-1 text-sm mt-2">
+                        <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
+                        <p className={profitColor}>
+                          Profits: ₹{formatCurrency(profits)} 
+                          {principal > 0 && (
+                            <span className="text-xs ml-1">
+                              ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
+                            </span>
+                          )}
+                        </p>
+                        <p className="font-semibold border-t border-green-300 pt-1">
+                          Total Value: ₹{formatCurrency(totalValue)}
+                        </p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1 text-sm mt-2">
-                      <p className="text-blue-600">Principal: ₹{formatCurrency(principal)}</p>
-                      <p className={profitColor}>
-                        Profits: ₹{formatCurrency(profits)} 
-                        {principal > 0 && (
-                          <span className="text-xs ml-1">
-                            ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%)
-                          </span>
-                        )}
-                      </p>
-                      <p className="font-semibold border-t border-green-300 pt-1">
-                        Total Value: ₹{formatCurrency(totalValue)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Expense Modal */}
+      {/* Event Modal - Handles both Income and Expense Events */}
       <AnimatePresence>
         {showEventModal && currentEvent && (
           <motion.div
@@ -1153,268 +1211,342 @@ export default function GamePlay() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-4">
-              <h2 className="text-xl font-bebas">{currentEvent.title}</h2>
+            <div className={`bg-white p-6 rounded-lg shadow-lg max-w-md mx-4 ${
+              currentEvent.type === 'income' ? 'border-2 border-green-400' : 'border-2 border-red-400'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">
+                  {currentEvent.type === 'income' ? '🎉' : '💸'}
+                </span>
+                <h2 className="text-xl font-bebas">{currentEvent.title}</h2>
+              </div>
               <p className="mt-2">{currentEvent.description}</p>
-              <p className="mt-2 font-semibold">Cost: ₹{formatCurrency(currentEvent.cost)}</p>
+              <p className={`mt-2 font-semibold ${
+                currentEvent.type === 'income' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {currentEvent.type === 'income' ? 'Amount Received:' : 'Cost:'} {currentEvent.type === 'income' ? '+' : ''}₹{formatCurrency(currentEvent.cost)}
+              </p>
               
-              {/* Show investment value if player has investments */}
-              {hasAnyInvestments() && (
-                <p className="mt-1 text-sm text-gray-600">
-                  Total Investment Value: ₹{formatCurrency(getTotalInvestmentValue())}
-                </p>
+              {/* For Income Events - Just show acknowledgment */}
+              {currentEvent.type === 'income' && (
+                <div className="mt-4">
+                  <div className="bg-green-50 border border-green-200 rounded p-3 mb-3">
+                    <p className="text-sm text-green-700">
+                      💰 Your cash has been increased by ₹{formatCurrency(currentEvent.cost)}!
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      New cash balance: ₹{formatCurrency(cash)}
+                    </p>
+                  </div>
+                  <button
+                    className="w-full px-4 py-2 rounded bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => {
+                      setShowEventModal(false);
+                      setCurrentEvent(null);
+                    }}
+                  >
+                    🎉 Awesome! Continue Playing
+                  </button>
+                </div>
               )}
               
-              <div className="mt-4 space-y-2">
-                <button
-                  className={`w-full px-4 py-2 rounded ${
-                    cash >= (currentEvent?.cost || 0)
-                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                      : 'bg-red-500 hover:bg-red-600 text-white'
-                  }`}
-                  onClick={() => currentEvent && payExpenseWithCash(currentEvent)}
-                  title={cash < (currentEvent?.cost || 0) ? 'You don\'t have enough cash, but you can still try to pay' : ''}
-                >
-                  💰 Pay with Cash (₹{formatCurrency(cash)} available)
-                  {cash < (currentEvent?.cost || 0) && (
-                    <span className="block text-xs">⚠️ Insufficient cash - will go negative</span>
+              {/* For Expense Events - Show payment options */}
+              {currentEvent.type === 'expense' && (
+                <>
+                  {/* Show investment value if player has investments */}
+                  {hasAnyInvestments() && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      Total Investment Value: ₹{formatCurrency(getTotalInvestmentValue())}
+                    </p>
                   )}
-                </button>
-                
-                {hasAnyInvestments() && !showInvestmentSelector && (
-                  <button
-                    className="w-full px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
-                    onClick={() => setShowInvestmentSelector(true)}
-                  >
-                    📈 Choose Investments to Sell (₹{formatCurrency(getTotalInvestmentValue())} available)
-                  </button>
-                )}
-                
-                {hasAnyInvestments() && showInvestmentSelector && (
-                  <div className="bg-gray-50 border rounded p-3 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-semibold text-sm">Select investments to sell:</h4>
-                      <button 
-                        onClick={() => setShowInvestmentSelector(false)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {/* Traditional Investments */}
-                      {investmentOptions
-                        .filter(option => getTotalValue(option.asset) > 0)
-                        .map((option) => {
-                          const principal = investments[option.asset] || 0;
-                          const profits = investmentProfits[option.asset] || 0;
-                          const totalValue = getTotalValue(option.asset);
-                          
-                          return (
-                            <div key={option.asset} className="bg-white border rounded p-2">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-xs">{option.name}</p>
-                                  <p className="text-xs text-gray-600">
-                                    Principal: ₹{formatCurrency(principal)} | 
-                                    Profits: ₹{formatCurrency(profits)}
-                                  </p>
-                                  <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
-                                </div>
-                                <div className="ml-2 space-x-1">
-                                  <button
-                                    className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(option.asset, totalValue * 0.25)}
-                                    title="Sell 25%"
-                                  >
-                                    25%
-                                  </button>
-                                  <button
-                                    className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(option.asset, totalValue * 0.5)}
-                                    title="Sell 50%"
-                                  >
-                                    50%
-                                  </button>
-                                  <button
-                                    className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(option.asset, totalValue)}
-                                    title="Sell All"
-                                  >
-                                    ALL
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      
-                      {/* Stock Investments */}
-                      {Object.entries(stocks)
-                        .filter(([symbol, stock]) => getTotalValue(symbol as Asset) > 0)
-                        .map(([symbol, stock]) => {
-                          const asset = symbol as Asset;
-                          const principal = investments[asset] || 0;
-                          const profits = investmentProfits[asset] || 0;
-                          const totalValue = getTotalValue(asset);
-                          const ownedShares = getOwnedShares(symbol);
-                          
-                          return (
-                            <div key={symbol} className="bg-blue-50 border border-blue-200 rounded p-2">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-xs">📈 {stock.name}</p>
-                                  <p className="text-xs text-gray-600">
-                                    {ownedShares} shares @ ₹{stock.currentPrice.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
-                                </div>
-                                <div className="ml-2 space-x-1">
-                                  <button
-                                    className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
-                                    title="Sell 25%"
-                                  >
-                                    25%
-                                  </button>
-                                  <button
-                                    className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
-                                    title="Sell 50%"
-                                  >
-                                    50%
-                                  </button>
-                                  <button
-                                    className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue)}
-                                    title="Sell All"
-                                  >
-                                    ALL
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      
-                      {/* Crypto Investments */}
-                      {Object.entries(cryptos)
-                        .filter(([symbol, crypto]) => getTotalValue(symbol as Asset) > 0)
-                        .map(([symbol, crypto]) => {
-                          const asset = symbol as Asset;
-                          const principal = investments[asset] || 0;
-                          const profits = investmentProfits[asset] || 0;
-                          const totalValue = getTotalValue(asset);
-                          const ownedCoins = getOwnedCoins(symbol);
-                          
-                          return (
-                            <div key={symbol} className="bg-purple-50 border border-purple-200 rounded p-2">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-xs">🪙 {crypto.name}</p>
-                                  <p className="text-xs text-gray-600">
-                                    {ownedCoins} coins @ ₹{crypto.currentPrice.toFixed(2)}
-                                  </p>
-                                  <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
-                                </div>
-                                <div className="ml-2 space-x-1">
-                                  <button
-                                    className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
-                                    title="Sell 25%"
-                                  >
-                                    25%
-                                  </button>
-                                  <button
-                                    className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
-                                    title="Sell 50%"
-                                  >
-                                    50%
-                                  </button>
-                                  <button
-                                    className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue)}
-                                    title="Sell All"
-                                  >
-                                    ALL
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      
-                      {/* Real Estate Investments */}
-                      {Object.entries(realEstates)
-                        .filter(([symbol, realEstate]) => getTotalValue(symbol as Asset) > 0)
-                        .map(([symbol, realEstate]) => {
-                          const asset = symbol as Asset;
-                          const principal = investments[asset] || 0;
-                          const profits = investmentProfits[asset] || 0;
-                          const totalValue = getTotalValue(asset);
-                          const ownedProperties = getOwnedProperties(symbol);
-                          
-                          return (
-                            <div key={symbol} className="bg-green-50 border border-green-200 rounded p-2">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-xs">🏠 {realEstate.name}</p>
-                                  <p className="text-xs text-gray-600">
-                                    {ownedProperties} properties @ ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
-                                  </p>
-                                  <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
-                                </div>
-                                <div className="ml-2 space-x-1">
-                                  <button
-                                    className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
-                                    title="Sell 25%"
-                                  >
-                                    25%
-                                  </button>
-                                  <button
-                                    className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
-                                    title="Sell 50%"
-                                  >
-                                    50%
-                                  </button>
-                                  <button
-                                    className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
-                                    onClick={() => handleSellInvestment(asset, totalValue)}
-                                    title="Sell All"
-                                  >
-                                    ALL
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                    <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                      💡 Current cash: ₹{formatCurrency(cash)} | Need: ₹{formatCurrency(Math.max(0, (currentEvent?.cost || 0) - cash))} more
-                      {cash >= (currentEvent?.cost || 0) && (
-                        <div className="text-green-600 font-semibold mt-1">
-                          ✅ You now have enough cash to pay the expense!
-                        </div>
+                  
+                  <div className="mt-4 space-y-2">
+                    <button
+                      className={`w-full px-4 py-2 rounded ${
+                        cash >= (currentEvent?.cost || 0)
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : 'bg-red-500 hover:bg-red-600 text-white'
+                      }`}
+                      onClick={() => currentEvent && payExpenseWithCash(currentEvent)}
+                      title={cash < (currentEvent?.cost || 0) ? 'You don\'t have enough cash, but you can still try to pay' : ''}
+                    >
+                      💰 Pay with Cash (₹{formatCurrency(cash)} available)
+                      {cash < (currentEvent?.cost || 0) && (
+                        <span className="block text-xs">⚠️ Insufficient cash - will go negative</span>
                       )}
-                    </div>
+                    </button>
+                    
+                    {hasAnyInvestments() && !showInvestmentSelector && (
+                      <button
+                        className="w-full px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
+                        onClick={() => setShowInvestmentSelector(true)}
+                      >
+                        📈 Choose Investments to Sell (₹{formatCurrency(getTotalInvestmentValue())} available)
+                      </button>
+                    )}
+                    
+                    {hasAnyInvestments() && showInvestmentSelector && (
+                      <div className="bg-gray-50 border rounded p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-semibold text-sm">Select investments to sell:</h4>
+                          <button 
+                            onClick={() => setShowInvestmentSelector(false)}
+                            className="text-gray-500 hover:text-gray-700"
+                            >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {/* Traditional Investments */}
+                          {investmentOptions
+                            .filter(option => getTotalValue(option.asset) > 0)
+                            .map((option) => {
+                              const principal = investments[option.asset] || 0;
+                              const profits = investmentProfits[option.asset] || 0;
+                              const totalValue = getTotalValue(option.asset);
+                              
+                              return (
+                                <div key={option.asset} className="bg-white border rounded p-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-xs">{option.name}</p>
+                                      <p className="text-xs text-gray-600">
+                                        Principal: ₹{formatCurrency(principal)} | 
+                                        Profits: ₹{formatCurrency(profits)}
+                                      </p>
+                                      <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
+                                    </div>
+                                    <div className="ml-2">
+                                      <div className="flex space-x-1 mb-1">
+                                        <button
+                                          className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
+                                          onClick={() => handleSellInvestment(option.asset, totalValue * 0.25)}
+                                          title="Sell 25%"
+                                        >
+                                          25%
+                                        </button>
+                                        <button
+                                          className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
+                                          onClick={() => handleSellInvestment(option.asset, totalValue * 0.5)}
+                                          title="Sell 50%"
+                                        >
+                                          50%
+                                        </button>
+                                        <button
+                                          className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
+                                          onClick={() => handleSellInvestment(option.asset, totalValue)}
+                                          title="Sell All"
+                                        >
+                                          ALL
+                                        </button>
+                                      </div>
+                                      <div className="flex space-x-1">
+                                        <button
+                                          className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs"
+                                          onClick={() => setShowCustomAmountFor(showCustomAmountFor === option.asset ? null : option.asset)}
+                                          title="Custom Amount"
+                                        >
+                                          Custom
+                                        </button>
+                                      </div>
+                                      {showCustomAmountFor === option.asset && (
+                                        <div className="mt-2 flex space-x-1">
+                                          <input
+                                            type="number"
+                                            placeholder="Amount"
+                                            value={customSellAmounts[option.asset] || ''}
+                                            onChange={(e) => setCustomSellAmounts({...customSellAmounts, [option.asset]: parseInt(e.target.value) || 0})}
+                                            className="w-20 px-1 py-1 border rounded text-xs"
+                                            max={totalValue}
+                                          />
+                                          <button
+                                            className="bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded text-xs"
+                                            onClick={() => {
+                                              const amount = customSellAmounts[option.asset] || 0;
+                                              if (amount > 0 && amount <= totalValue) {
+                                                handleSellInvestment(option.asset, amount);
+                                                setShowCustomAmountFor(null);
+                                              }
+                                            }}
+                                          >
+                                            Sell
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          
+                          {/* Stock Investments */}
+                          {Object.entries(stocks)
+                            .filter(([symbol, stock]) => getTotalValue(symbol as Asset) > 0)
+                            .map(([symbol, stock]) => {
+                              const asset = symbol as Asset;
+                              const principal = investments[asset] || 0;
+                              const profits = investmentProfits[asset] || 0;
+                              const totalValue = getTotalValue(asset);
+                              const ownedShares = getOwnedShares(symbol);
+                              
+                              return (
+                                <div key={symbol} className="bg-blue-50 border border-blue-200 rounded p-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-xs">📈 {stock.name}</p>
+                                      <p className="text-xs text-gray-600">
+                                        {ownedShares} shares @ ₹{stock.currentPrice.toFixed(2)}
+                                      </p>
+                                      <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
+                                    </div>
+                                    <div className="ml-2 space-x-1">
+                                      <button
+                                        className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
+                                        title="Sell 25%"
+                                      >
+                                        25%
+                                      </button>
+                                      <button
+                                        className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
+                                        title="Sell 50%"
+                                      >
+                                        50%
+                                      </button>
+                                      <button
+                                        className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue)}
+                                        title="Sell All"
+                                      >
+                                        ALL
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          
+                          {/* Crypto Investments */}
+                          {Object.entries(cryptos)
+                            .filter(([symbol, crypto]) => getTotalValue(symbol as Asset) > 0)
+                            .map(([symbol, crypto]) => {
+                              const asset = symbol as Asset;
+                              const principal = investments[asset] || 0;
+                              const profits = investmentProfits[asset] || 0;
+                              const totalValue = getTotalValue(asset);
+                              const ownedCoins = getOwnedCoins(symbol);
+                              
+                              return (
+                                <div key={symbol} className="bg-purple-50 border border-purple-200 rounded p-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-xs">🪙 {crypto.name}</p>
+                                      <p className="text-xs text-gray-600">
+                                        {ownedCoins} coins @ ₹{crypto.currentPrice.toFixed(2)}
+                                      </p>
+                                      <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
+                                    </div>
+                                    <div className="ml-2 space-x-1">
+                                      <button
+                                        className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
+                                        title="Sell 25%"
+                                      >
+                                        25%
+                                      </button>
+                                      <button
+                                        className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
+                                        title="Sell 50%"
+                                      >
+                                        50%
+                                      </button>
+                                      <button
+                                        className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue)}
+                                        title="Sell All"
+                                      >
+                                        ALL
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          
+                          {/* Real Estate Investments */}
+                          {Object.entries(realEstates)
+                            .filter(([symbol, realEstate]) => getTotalValue(symbol as Asset) > 0)
+                            .map(([symbol, realEstate]) => {
+                              const asset = symbol as Asset;
+                              const principal = investments[asset] || 0;
+                              const profits = investmentProfits[asset] || 0;
+                              const totalValue = getTotalValue(asset);
+                              const ownedProperties = getOwnedProperties(symbol);
+                              
+                              return (
+                                <div key={symbol} className="bg-green-50 border border-green-200 rounded p-2">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-xs">🏠 {realEstate.name}</p>
+                                      <p className="text-xs text-gray-600">
+                                        {ownedProperties} properties @ ₹{(realEstate.currentPrice / 100000).toFixed(1)}L
+                                      </p>
+                                      <p className="text-xs font-semibold">Total: ₹{formatCurrency(totalValue)}</p>
+                                    </div>
+                                    <div className="ml-2 space-x-1">
+                                      <button
+                                        className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.25)}
+                                        title="Sell 25%"
+                                      >
+                                        25%
+                                      </button>
+                                      <button
+                                        className="bg-red-200 hover:bg-red-300 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue * 0.5)}
+                                        title="Sell 50%"
+                                      >
+                                        50%
+                                      </button>
+                                      <button
+                                        className="bg-red-300 hover:bg-red-400 text-red-700 px-2 py-1 rounded text-xs"
+                                        onClick={() => handleSellInvestment(asset, totalValue)}
+                                        title="Sell All"
+                                      >
+                                        ALL
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                        <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                          💡 Current cash: ₹{formatCurrency(cash)} | Need: ₹{formatCurrency(Math.max(0, (currentEvent?.cost || 0) - cash))} more
+                          {cash >= (currentEvent?.cost || 0) && (
+                            <div className="text-green-600 font-semibold mt-1">
+                              ✅ You now have enough cash to pay the expense!
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!hasAnyInvestments() && cash < (currentEvent?.cost || 0) && (
+                      <div className="bg-yellow-100 border border-yellow-400 rounded p-3 text-sm">
+                        <p className="text-yellow-800 font-semibold">⚠️ Emergency Situation!</p>
+                        <p className="text-yellow-700">You have insufficient funds. You'll need to pay with available cash and go into debt.</p>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      💡 You must pay this expense to continue the game
+                    </p>
                   </div>
-                )}
-                
-                {!hasAnyInvestments() && cash < (currentEvent?.cost || 0) && (
-                  <div className="bg-yellow-100 border border-yellow-400 rounded p-3 text-sm">
-                    <p className="text-yellow-800 font-semibold">⚠️ Emergency Situation!</p>
-                    <p className="text-yellow-700">You have insufficient funds. You'll need to pay with available cash and go into debt.</p>
-                  </div>
-                )}
-                
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  💡 You must pay this expense to continue the game
-                </p>
-              </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

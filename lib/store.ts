@@ -54,6 +54,12 @@ export type GameState = {
   passiveIncome: number;
   lastProcessedMonth: number;
   monthlyNetIncome: number; // Add this to track current monthly net income
+  pausedTime: number; // Total time spent paused (in milliseconds)
+  lastPauseStart: number; // When the current pause started (if paused)
+  isPaused: boolean; // Whether the game is currently paused
+  gameTime: number; // Game time that doesn't advance when paused
+  lastAdvanceTime: number; // Last time we actually advanced the game
+  setPaused: (paused: boolean) => void; // Function to set pause state
   setDifficulty: (difficulty: Difficulty) => void;
   initializeGame: () => void;
   advanceTime: () => void;
@@ -312,6 +318,11 @@ export const useGameStore = create<GameState>()(
       currentDate: new Date(), // Add currentDate
       lastProcessedMonth: 0, // Track last processed month to prevent duplicate updates
       monthlyNetIncome: (getInitialState("easy").salary - getInitialState("easy").fixedExpenses) / 12,
+      pausedTime: 0, // Total time spent paused
+      lastPauseStart: 0, // When the current pause started
+      isPaused: false, // Whether the game is currently paused
+      gameTime: 0, // Game time that doesn't advance when paused
+      lastAdvanceTime: 0, // Last time we actually advanced the game
       startTime: 0,
       currentTime: 0,
       timeScale: 1,
@@ -344,9 +355,12 @@ export const useGameStore = create<GameState>()(
       initializeGame: () => {
         const { difficulty } = get();
         const initialState = getInitialState(difficulty);
+        const now = Date.now();
         set({
-          startTime: Date.now(),
-          currentTime: Date.now(),
+          startTime: now,
+          currentTime: now,
+          gameTime: 0,
+          lastAdvanceTime: now,
           startDate: new Date(),
           currentDate: new Date(),
           lastProcessedMonth: 0,
@@ -374,32 +388,48 @@ export const useGameStore = create<GameState>()(
       // Advance Time
       advanceTime: () => {
         const state = get();
+        
+        // Don't advance time if game is paused
+        if (state.isPaused) {
+          console.log(`🛑 AdvanceTime BLOCKED - Game is paused`);
+          // Just update currentTime for frame tracking, but keep lastAdvanceTime and gameTime unchanged
+          set({ currentTime: Date.now() });
+          return;
+        }
+        
         const now = Date.now();
-        const elapsedTime = now - state.startTime;
         
         // Only process time updates every 100ms to avoid excessive calls
         if (now - state.currentTime < 100) {
           return;
         }
         
-        const newTimeScale = Math.max(0.1, 1 - (elapsedTime / GAME_DURATION) * 0.9);
+        // Calculate game time advancement using last time we actually advanced
+        // This ensures no time accumulates during pause periods
+        const lastAdvance = state.lastAdvanceTime || state.startTime;
+        const timeDelta = now - lastAdvance;
+        const newGameTime = state.gameTime + timeDelta;
+        
+        console.log(`⏰ Game RUNNING - GameTime: ${Math.floor(state.gameTime/1000)}s → ${Math.floor(newGameTime/1000)}s (delta: ${Math.floor(timeDelta/1000)}s)`);
+        
+        const newTimeScale = Math.max(0.1, 1 - (newGameTime / GAME_DURATION) * 0.9);
 
         // Add basic timer debug every 3 seconds
-        if (Math.floor(elapsedTime / 3000) > Math.floor((elapsedTime - 100) / 3000)) {
-          console.log(`Timer running - Elapsed: ${Math.floor(elapsedTime/1000)}s, Cash: ₹${state.cash.toLocaleString()}`);
+        if (Math.floor(newGameTime / 3000) > Math.floor(state.gameTime / 3000)) {
+          console.log(`Timer running - Game Time: ${Math.floor(newGameTime/1000)}s, Real Time: ${Math.floor((now - state.startTime)/1000)}s, Cash: ₹${state.cash.toLocaleString()}`);
         }
 
-        if (elapsedTime >= GAME_DURATION) {
+        if (newGameTime >= GAME_DURATION) {
           set({ isGameOver: true });
           return;
         }
 
         // Random event trigger - reduced frequency for expense events (max 1-2 per year)
         // Only trigger expense events if it's been at least 18-36 seconds (6-12 months) since last one
-        if (elapsedTime > 60000) { // After 1 minute
-          const monthsElapsed = Math.floor(elapsedTime / 5000); // 5 seconds = 1 month
+        if (newGameTime > 60000) { // After 1 minute
+          const monthsElapsed = Math.floor(newGameTime / 5000); // 5 seconds = 1 month
           const lastExpenseMonth = state.events.length > 0 ? 
-            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? elapsedTime - 18000 : 0) / 5000) : 0;
+            Math.floor((state.events[state.events.length - 1]?.id === 'expense' ? newGameTime - 18000 : 0) / 5000) : 0;
           
           // Only allow expense events if it's been at least 6 months since last expense
           const monthsSinceLastExpense = monthsElapsed - lastExpenseMonth;
@@ -426,7 +456,7 @@ export const useGameStore = create<GameState>()(
               console.log(`🎯 Income event triggered: ${event.title}`);
               set((state) => ({
                 currentEvent: event,
-                showEventModal: false,
+                showEventModal: true, // Show modal for income events too!
                 events: [...state.events, event],
                 cash: state.cash + event.cost,
                 netWorth: state.netWorth + event.cost,
@@ -437,7 +467,7 @@ export const useGameStore = create<GameState>()(
 
         // Calculate how many months have passed (each 5 seconds = 1 month in game time)
         // 600 seconds total ÷ 10 years = 60 seconds per year ÷ 12 months = 5 seconds per month
-        const monthsElapsed = Math.floor(elapsedTime / 5000); // 5 seconds = 1 month
+        const monthsElapsed = Math.floor(newGameTime / 5000); // 5 seconds = 1 month
         
         // Update current date based on elapsed time
         const gameStartDate = new Date(state.startDate);
@@ -705,6 +735,8 @@ export const useGameStore = create<GameState>()(
             events: newEvents,
             passiveIncome: totalCashDividends,
             currentTime: now,
+            gameTime: newGameTime,
+            lastAdvanceTime: now,
             timeScale: newTimeScale,
             aiNetWorth: newAiNetWorth, // Use the monthly calculated AI growth
           });
@@ -712,6 +744,8 @@ export const useGameStore = create<GameState>()(
           // Always update the time-based state even if no month change
           set({
             currentTime: now,
+            gameTime: newGameTime,
+            lastAdvanceTime: now,
             timeScale: newTimeScale,
             // Remove aiNetWorth update here - it should only update monthly
           });
@@ -1087,6 +1121,28 @@ export const useGameStore = create<GameState>()(
         }));
         
         get().updateNetWorth();
+      },
+
+      // Set pause state
+      setPaused: (paused: boolean) => {
+        const state = get();
+        console.log(`🎮 Setting game pause state: ${paused}`);
+        
+        if (paused) {
+          // When pausing, save the current time as the last advance time
+          // This prevents time accumulation during pause
+          set({ 
+            isPaused: true,
+            lastAdvanceTime: Date.now()
+          });
+        } else {
+          // When unpausing, reset the last advance time to now
+          // This prevents the time jump when resuming
+          set({ 
+            isPaused: false,
+            lastAdvanceTime: Date.now()
+          });
+        }
       },
     }),
     { name: "finance-sim" }
