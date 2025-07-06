@@ -3,6 +3,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Navigation } from "@/components/navigation"
 import type React from "react"
 import { ClerkProvider } from '@clerk/nextjs'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 export default function RootLayout({
   children,
@@ -30,6 +32,19 @@ export default function RootLayout({
             <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-3 py-">
               {children}
             </main>
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="colored"
+              className="mt-16"
+            />
           </ThemeProvider>
         </body>
       </html>

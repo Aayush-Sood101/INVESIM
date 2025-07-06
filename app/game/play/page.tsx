@@ -6,6 +6,7 @@ import { useGameStore, Asset, GameEvent } from "@/lib/store";
 import { formatCurrency } from "@/lib/utils";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { CashChangeNotification } from "@/components/ui/cash-change-notification";
+import { toast } from 'react-toastify';
 
 // Base return rates for investment options - Traditional investments only (4 cards)
 const baseInvestmentOptions: { name: string; asset: Asset; baseReturnRate: number }[] = [
@@ -158,25 +159,25 @@ export default function GamePlay() {
 
   const handleInvest = (asset: Asset, amount: number) => {
     if (amount <= 0 || amount > cash) {
-      alert("Invalid investment amount");
+      toast.error("💸 Invalid investment amount or insufficient cash!");
       return;
     }
     invest(asset, amount);
     setAmounts((prev) => ({ ...prev, [asset]: 0 }));
     updateNetWorth();
-    alert(`Invested ₹${formatCurrency(amount)} in ${asset}!`);
+    toast.success(`🎯 Invested ₹${formatCurrency(amount)} in ${asset}!`);
   };
 
   const handleWithdraw = (asset: Asset, amount: number) => {
     const totalValue = getTotalValue(asset);
     if (totalValue < amount || amount <= 0) {
-      alert("Insufficient funds in this investment!");
+      toast.error("❌ Insufficient funds in this investment!");
       return;
     }
     withdraw(asset, amount);
     setAmounts((prev) => ({ ...prev, [asset]: 0 }));
     updateNetWorth();
-    alert(`Withdrew ₹${formatCurrency(amount)} from ${asset}`);
+    toast.success(`💰 Withdrew ₹${formatCurrency(amount)} from ${asset}`);
   };
 
   const handleGoldInvest = (quantity: number) => {
@@ -188,7 +189,7 @@ export default function GamePlay() {
     const amount = quantity * currentGoldRate;
     const totalGoldValue = getTotalValue("gold");
     if (totalGoldValue < amount || amount <= 0) {
-      alert("Insufficient gold investment!");
+      toast.error("🥇 Insufficient gold investment!");
       return;
     }
     handleWithdraw("gold", amount);
@@ -227,25 +228,25 @@ export default function GamePlay() {
   const handleStockBuy = (stockSymbol: string, quantity: number) => {
     const stock = stocks[stockSymbol];
     if (!stock || quantity <= 0) {
-      alert("Invalid stock or quantity!");
+      toast.error("📈 Invalid stock or quantity!");
       return;
     }
     
     const totalCost = stock.currentPrice * quantity;
     if (totalCost > cash) {
-      alert("Insufficient cash to buy stocks!");
+      toast.error("💸 Insufficient cash to buy stocks!");
       return;
     }
     
     buyStock(stockSymbol, quantity);
     setStockBuyQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
-    alert(`Bought ${quantity} shares of ${stock.name} for ₹${formatCurrency(totalCost)}`);
+    toast.success(`🎯 Bought ${quantity} shares of ${stock.name} for ₹${formatCurrency(totalCost)}`);
   };
 
   const handleStockSell = (stockSymbol: string, quantity: number) => {
     const stock = stocks[stockSymbol];
     if (!stock || quantity <= 0) {
-      alert("Invalid stock or quantity!");
+      toast.error("📈 Invalid stock or quantity!");
       return;
     }
     
@@ -254,7 +255,7 @@ export default function GamePlay() {
     const currentShares = Math.floor(totalValue / stock.currentPrice); // Approximate shares owned
     
     if (quantity > currentShares) {
-      alert("You don't own enough shares!");
+      toast.error("❌ You don't own enough shares!");
       return;
     }
     
@@ -262,7 +263,7 @@ export default function GamePlay() {
     setStockBuyQuantities((prev) => ({ ...prev, [stockSymbol]: 0 }));
     
     const saleValue = stock.currentPrice * quantity;
-    alert(`Sold ${quantity} shares of ${stock.name} for ₹${formatCurrency(saleValue)}`);
+    toast.success(`💰 Sold ${quantity} shares of ${stock.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedShares = (stockSymbol: string) => {
@@ -273,25 +274,25 @@ export default function GamePlay() {
   const handleCryptoBuy = (cryptoSymbol: string, quantity: number) => {
     const crypto = cryptos[cryptoSymbol];
     if (!crypto || quantity <= 0) {
-      alert("Invalid crypto or quantity!");
+      toast.error("₿ Invalid crypto or quantity!");
       return;
     }
     
     const totalCost = crypto.currentPrice * quantity;
     if (totalCost > cash) {
-      alert("Insufficient cash to buy crypto!");
+      toast.error("💸 Insufficient cash to buy crypto!");
       return;
     }
     
     buyCrypto(cryptoSymbol, quantity);
     setCryptoBuyQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
-    alert(`Bought ${quantity} ${crypto.name} for ₹${formatCurrency(totalCost)}`);
+    toast.success(`🚀 Bought ${quantity} ${crypto.name} for ₹${formatCurrency(totalCost)}`);
   };
 
   const handleCryptoSell = (cryptoSymbol: string, quantity: number) => {
     const crypto = cryptos[cryptoSymbol];
     if (!crypto || quantity <= 0) {
-      alert("Invalid crypto or quantity!");
+      toast.error("₿ Invalid crypto or quantity!");
       return;
     }
     
@@ -300,7 +301,7 @@ export default function GamePlay() {
     const currentCoins = Math.floor(totalValue / crypto.currentPrice); // Approximate coins owned
     
     if (quantity > currentCoins) {
-      alert("You don't own enough crypto!");
+      toast.error("❌ You don't own enough crypto!");
       return;
     }
     
@@ -308,41 +309,36 @@ export default function GamePlay() {
     setCryptoBuyQuantities((prev) => ({ ...prev, [cryptoSymbol]: 0 }));
     
     const saleValue = crypto.currentPrice * quantity;
-    alert(`Sold ${quantity} ${crypto.name} for ₹${formatCurrency(saleValue)}`);
+    toast.success(`💰 Sold ${quantity} ${crypto.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedCoins = (cryptoSymbol: string) => {
-    const owned = cryptoQuantities[cryptoSymbol] || 0;
-    // Debug logging - remove after testing
-    if (cryptoSymbol === 'bitcoin' && owned > 0) {
-      console.log(`🔍 DEBUG: Bitcoin owned = ${owned}, cryptoQuantities:`, cryptoQuantities);
-    }
-    return owned;
+    return cryptoQuantities[cryptoSymbol] || 0;
   };
 
   // Real Estate trading handlers
   const handleRealEstateBuy = (realEstateSymbol: string, quantity: number) => {
     const realEstate = realEstates[realEstateSymbol];
     if (!realEstate || quantity <= 0) {
-      alert("Invalid real estate property or quantity!");
+      toast.error("🏠 Invalid real estate property or quantity!");
       return;
     }
     
     const totalCost = realEstate.currentPrice * quantity;
     if (totalCost > cash) {
-      alert("Insufficient cash to buy real estate!");
+      toast.error("💸 Insufficient cash to buy real estate!");
       return;
     }
     
     buyRealEstate(realEstateSymbol, quantity);
     setRealEstateBuyQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
-    alert(`Bought ${quantity} ${realEstate.name} for ₹${formatCurrency(totalCost)}`);
+    toast.success(`🏡 Bought ${quantity} ${realEstate.name} for ₹${formatCurrency(totalCost)}`);
   };
 
   const handleRealEstateSell = (realEstateSymbol: string, quantity: number) => {
     const realEstate = realEstates[realEstateSymbol];
     if (!realEstate || quantity <= 0) {
-      alert("Invalid real estate property or quantity!");
+      toast.error("🏠 Invalid real estate property or quantity!");
       return;
     }
     
@@ -351,7 +347,7 @@ export default function GamePlay() {
     const currentProperties = Math.floor(totalValue / realEstate.currentPrice); // Approximate properties owned
     
     if (quantity > currentProperties) {
-      alert("You don't own enough properties!");
+      toast.error("❌ You don't own enough properties!");
       return;
     }
     
@@ -359,7 +355,7 @@ export default function GamePlay() {
     setRealEstateBuyQuantities((prev) => ({ ...prev, [realEstateSymbol]: 0 }));
     
     const saleValue = realEstate.currentPrice * quantity;
-    alert(`Sold ${quantity} ${realEstate.name} for ₹${formatCurrency(saleValue)}`);
+    toast.success(`💰 Sold ${quantity} ${realEstate.name} for ₹${formatCurrency(saleValue)}`);
   };
 
   const getOwnedProperties = (realEstateSymbol: string) => {
@@ -369,7 +365,7 @@ export default function GamePlay() {
   const handleSellInvestment = (asset: Asset, amount: number) => {
     const totalValue = getTotalValue(asset);
     if (amount > totalValue || amount <= 0) {
-      alert("Invalid amount to sell!");
+      toast.error("⚠️ Invalid amount to sell!");
       return;
     }
     
@@ -701,9 +697,8 @@ export default function GamePlay() {
                           onClick={() => {
                             const maxGrams = Math.floor(cash / currentGoldRate);
                             setGoldQuantity(maxGrams);
-                            handleGoldInvest(maxGrams);
                           }}
-                          title="Buy maximum gold possible"
+                          title="Set maximum gold quantity in input field"
                         >
                           MAX
                         </button>
@@ -714,18 +709,16 @@ export default function GamePlay() {
                           onClick={() => handleGoldWithdraw(goldQuantity)}
                         >
                           Sell Gold
-                        </button>
-                        <button
-                          className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                          onClick={() => {
-                            const totalGold = getTotalValue(option.asset) / currentGoldRate;
-                            setGoldQuantity(Math.floor(totalGold));
-                            handleGoldWithdraw(Math.floor(totalGold));
-                          }}
-                          title="Sell all gold"
-                        >
-                          ALL
-                        </button>
+                        </button>                          <button
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
+                            onClick={() => {
+                              const totalGold = getTotalValue(option.asset) / currentGoldRate;
+                              setGoldQuantity(Math.floor(totalGold));
+                            }}
+                            title="Set all owned gold quantity in input field"
+                          >
+                            ALL
+                          </button>
                       </div>
                     </div>
                   ) : (
@@ -750,8 +743,8 @@ export default function GamePlay() {
                         </button>
                         <button
                           className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                          onClick={() => handleInvest(option.asset, cash)}
-                          title="Invest all available cash"
+                          onClick={() => setAmounts((prev) => ({ ...prev, [option.asset]: cash }))}
+                          title="Set maximum investment amount in input field"
                         >
                           MAX
                         </button>
@@ -766,8 +759,8 @@ export default function GamePlay() {
                         </button>
                         <button
                           className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition duration-300 border-2 border-black"
-                          onClick={() => handleWithdraw(option.asset, getTotalValue(option.asset))}
-                          title="Withdraw all investment"
+                          onClick={() => setAmounts((prev) => ({ ...prev, [option.asset]: getTotalValue(option.asset) }))}
+                          title="Set total investment value in input field"
                         >
                           ALL
                         </button>
@@ -846,9 +839,8 @@ export default function GamePlay() {
                             onClick={() => {
                               const maxShares = Math.floor(cash / stock.currentPrice);
                               setStockBuyQuantities((prev) => ({ ...prev, [symbol]: maxShares }));
-                              handleStockBuy(symbol, maxShares);
                             }}
-                            title="Buy maximum shares possible"
+                            title="Set maximum shares quantity in input field"
                           >
                             MAX
                           </button>
@@ -865,10 +857,9 @@ export default function GamePlay() {
                             className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-black"
                             onClick={() => {
                               setStockBuyQuantities((prev) => ({ ...prev, [symbol]: ownedShares }));
-                              handleStockSell(symbol, ownedShares);
                             }}
                             disabled={ownedShares === 0}
-                            title="Sell all shares"
+                            title="Set all owned shares quantity in input field"
                           >
                             ALL
                           </button>
@@ -949,9 +940,8 @@ export default function GamePlay() {
                             onClick={() => {
                               const maxCoins = Math.floor((cash / crypto.currentPrice) * 10) / 10; // Round to 1 decimal
                               setCryptoBuyQuantities((prev) => ({ ...prev, [symbol]: maxCoins }));
-                              handleCryptoBuy(symbol, maxCoins);
                             }}
-                            title="Buy maximum coins possible"
+                            title="Set maximum coins quantity in input field"
                           >
                             MAX
                           </button>
@@ -968,10 +958,9 @@ export default function GamePlay() {
                             className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
                             onClick={() => {
                               setCryptoBuyQuantities((prev) => ({ ...prev, [symbol]: ownedCoins }));
-                              handleCryptoSell(symbol, ownedCoins);
                             }}
                             disabled={ownedCoins === 0}
-                            title="Sell all coins"
+                            title="Set all owned coins quantity in input field"
                           >
                             ALL
                           </button>
@@ -1051,9 +1040,8 @@ export default function GamePlay() {
                             onClick={() => {
                               const maxProperties = Math.floor(cash / realEstate.currentPrice);
                               setRealEstateBuyQuantities((prev) => ({ ...prev, [symbol]: maxProperties }));
-                              handleRealEstateBuy(symbol, maxProperties);
                             }}
-                            title="Buy maximum properties possible"
+                            title="Set maximum properties quantity in input field"
                           >
                             MAX
                           </button>
@@ -1070,10 +1058,9 @@ export default function GamePlay() {
                             className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded text-xs transition duration-300 border-2 border-red-800"
                             onClick={() => {
                               setRealEstateBuyQuantities((prev) => ({ ...prev, [symbol]: ownedProperties }));
-                              handleRealEstateSell(symbol, ownedProperties);
                             }}
                             disabled={ownedProperties === 0}
-                            title="Sell all properties"
+                            title="Set all owned properties quantity in input field"
                           >
                             ALL
                           </button>
