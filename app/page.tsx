@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
+import AuthButton from "../components/AuthButton";
 import { ArrowRight, Trophy, Wallet, TrendingUp, Target } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -11,6 +12,7 @@ export default function Home() {
       <header className="p-4 flex justify-between items-center backdrop-blur-xl bg-background/80 border-b border-border/50 sticky top-0 z-50">
         <h1 className="text-2xl font-black font-orbitron bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">Invesim</h1>
         <ThemeToggle />
+        <AuthButton />
       </header>
       <div className="max-w-7xl mx-auto p-8">
         {/* Hero Section */}

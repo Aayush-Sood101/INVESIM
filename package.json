@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-amplify/auth": "^6.16.0",
+    "@aws-amplify/core": "^6.13.3",
+    "@aws-amplify/ui-react": "^6.13.1",
     "@clerk/nextjs": "^6.10.6",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
@@ -41,10 +44,11 @@
     "@radix-ui/react-tooltip": "^1.1.6",
     "@types/react": "latest",
     "autoprefixer": "^10.4.20",
+    "aws-amplify": "^6.15.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "date-fns": "4.1.0",
+    "date-fns": "^3.6.0",
     "embla-carousel-react": "8.5.1",
     "framer-motion": "latest",
     "immer": "latest",
